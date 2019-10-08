@@ -4,3 +4,6 @@
 [submodule "tests/ruby-compiler-blbt"]
 	path = tests/ruby-compiler-blbt
 	url = https://github.com/pmq20/ruby-compiler-blbt.git
+[submodule "vendor/zlib"]
+	path = vendor/zlib
+	url = git@github.com:madler/zlib.git
