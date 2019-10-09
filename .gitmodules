@@ -13,3 +13,6 @@
 [submodule "vendor/readline"]
 	path = vendor/readline
 	url = https://git.savannah.gnu.org/git/readline.git
+[submodule "vendor/openssl"]
+	path = vendor/openssl
+	url = git@github.com:openssl/openssl.git
