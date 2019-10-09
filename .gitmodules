@@ -22,3 +22,6 @@
 [submodule "vendor/libffi"]
 	path = vendor/libffi
 	url = git@github.com:libffi/libffi.git
+[submodule "vendor/gdbm"]
+	path = vendor/gdbm
+	url = https://git.savannah.gnu.org/git/gdbm.git
