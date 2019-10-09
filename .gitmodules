@@ -16,3 +16,6 @@
 [submodule "vendor/openssl"]
 	path = vendor/openssl
 	url = git@github.com:openssl/openssl.git
+[submodule "vendor/ncurses"]
+	path = vendor/ncurses
+	url = git@github.com:mirror/ncurses.git
