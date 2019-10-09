@@ -19,3 +19,6 @@
 [submodule "vendor/ncurses"]
 	path = vendor/ncurses
 	url = git@github.com:mirror/ncurses.git
+[submodule "vendor/libffi"]
+	path = vendor/libffi
+	url = git@github.com:libffi/libffi.git
