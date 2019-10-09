@@ -6,22 +6,22 @@
 	url = https://github.com/pmq20/ruby-compiler-blbt.git
 [submodule "vendor/zlib"]
 	path = vendor/zlib
-	url = git@github.com:madler/zlib.git
+	url = https://github.com/madler/zlib.git
 [submodule "vendor/libyaml"]
 	path = vendor/libyaml
-	url = git@github.com:yaml/libyaml.git
+	url = https://github.com/yaml/libyaml.git
 [submodule "vendor/readline"]
 	path = vendor/readline
 	url = https://git.savannah.gnu.org/git/readline.git
 [submodule "vendor/openssl"]
 	path = vendor/openssl
-	url = git@github.com:openssl/openssl.git
+	url = https://github.com/openssl/openssl.git
 [submodule "vendor/ncurses"]
 	path = vendor/ncurses
-	url = git@github.com:mirror/ncurses.git
+	url = https://github.com/mirror/ncurses.git
 [submodule "vendor/libffi"]
 	path = vendor/libffi
-	url = git@github.com:libffi/libffi.git
+	url = https://github.com/libffi/libffi.git
 [submodule "vendor/gdbm"]
 	path = vendor/gdbm
 	url = https://git.savannah.gnu.org/git/gdbm.git
