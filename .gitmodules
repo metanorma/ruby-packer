@@ -22,9 +22,6 @@
 [submodule "vendor/libffi"]
 	path = vendor/libffi
 	url = https://github.com/libffi/libffi.git
-[submodule "vendor/gdbm"]
-	path = vendor/gdbm
-	url = https://git.savannah.gnu.org/git/gdbm.git
 [submodule "vendor/yaml"]
 	path = vendor/yaml
 	url = https://github.com/yaml/libyaml.git
