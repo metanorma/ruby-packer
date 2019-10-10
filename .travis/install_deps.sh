@@ -16,7 +16,7 @@ which autopoint
 cd vendor/gdbm && ./bootstrap && ./configure && cd -
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-  sudo chmod -R a+x vendor/gdbm
+  sudo chmod -R 777 vendor/gdbm
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
