@@ -2,6 +2,9 @@
 
 set -uex
 
+cd vendor/yaml && ./bootstrap && cd -
+cd vendor/libffi && ./autogen.sh && ./configure && cd -
+
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update
   brew install squashfs
