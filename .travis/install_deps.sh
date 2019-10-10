@@ -4,6 +4,7 @@ set -uex
 
 cd vendor/yaml && ./bootstrap && cd -
 cd vendor/libffi && ./autogen.sh && ./configure && cd -
+cd vendor/gdbm && ./bootstrap && ./configure && cd -
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update
