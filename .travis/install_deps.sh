@@ -17,6 +17,7 @@ cd vendor/gdbm && ./bootstrap && ./configure && cd -
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
   sudo chmod -R 777 vendor/gdbm
+  ls -lah vendor/gdbm
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
