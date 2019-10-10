@@ -9,11 +9,15 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   ls /usr/local/opt/gettext/bin/autopoint
   export PATH=/usr/local/opt/gettext/bin:$PATH
 else
-  sudo apt-get update
-  sudo apt-get install autopoint
+  apt-get update
+  apt-get install -y -q autopoint
 fi
 which autopoint
 cd vendor/gdbm && ./bootstrap && ./configure && cd -
+
+if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+  chmod -R a+x vendor/gdbm
+fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update
@@ -21,6 +25,6 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew install texinfo
   brew install openssl
 else
-  sudo apt-get update
-  sudo apt-get install -y -q openssl squashfs-tools curl install-info info texinfo texi2html
+  apt-get update
+  apt-get install -y -q openssl squashfs-tools curl install-info info texinfo texi2html
 fi
