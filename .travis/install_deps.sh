@@ -8,8 +8,11 @@ cd vendor/libffi && ./autogen.sh && ./configure && cd -
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   ls /usr/local/opt/gettext/bin/autopoint
   export PATH=/usr/local/opt/gettext/bin:$PATH
+else
+  sudo apt-get update
+  sudo apt-get install autopoint
 fi
-
+which autopoint
 cd vendor/gdbm && ./bootstrap && ./configure && cd -
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
