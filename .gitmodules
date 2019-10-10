@@ -22,6 +22,3 @@
 [submodule "vendor/libffi"]
 	path = vendor/libffi
 	url = https://github.com/libffi/libffi.git
-[submodule "vendor/yaml"]
-	path = vendor/yaml
-	url = https://github.com/yaml/libyaml.git
