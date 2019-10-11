@@ -38,7 +38,7 @@ echo "------------------------------------"
 
 bundle exec rake test
 
-gzip rubyc
+yes | gzip rubyc
 
 if [ "$TRAVIS_TAG" = "" ]; then
   VERSION="${RUBY_VERSION}-${RUBYC_VERSION}"

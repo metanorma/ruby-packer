@@ -525,10 +525,10 @@ class Compiler
 
     stuff 'gdbm' do
       Dir['**/configure.ac'].each do |x|
-        File.utime(Time.at(0), Time.at(0), x)
+        File.lutime(Time.at(0), Time.at(0), x)
       end
       Dir['**/*.m4'].each do |x|
-        File.utime(Time.at(0), Time.at(0), x)
+        File.lutime(Time.at(0), Time.at(0), x)
       end
 
       @utils.run(@compile_env,
