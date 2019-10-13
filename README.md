@@ -30,6 +30,18 @@ You won't need to modify a single line of code in your application, no matter ho
 
 For previous releases, cf. http://enclose.io/rubyc
 
+### Prerequirements
+
+This fork uses all dependent libraries as git submodules(vendor folde). In order to start working, one need to configure dependencies:
+
+```bash
+git submodule update --init --recursive
+
+cd vendor/yaml && ./bootstrap
+cd vendor/libffi && ./autogen.sh && ./configure
+cd vendor/gdbm && ./bootstrap && ./configure
+```
+
 ### Install on macOS
 
 First install the prerequisites:

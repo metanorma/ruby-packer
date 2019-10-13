@@ -15,10 +15,6 @@ fi
 which autopoint
 cd vendor/gdbm && ./bootstrap && ./configure && cd -
 
-if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-  sudo chown -R travis vendor/gdbm
-fi
-
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update
   brew install squashfs
