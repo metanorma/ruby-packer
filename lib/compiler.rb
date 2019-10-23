@@ -962,10 +962,19 @@ class Compiler
         @cflags += ' -MD /Ox '
       end
     else
-      if @options[:debug]
-        @cflags += ' -fPIC -g -O0 -pipe '
+      # https://wiki.gentoo.org/wiki/GCC_optimization - using pipe operator on lower memory os leads to increased memory usage
+      if RUBY_PLATFORM =~ /linux/i
+        if @options[:debug]
+          @cflags += ' -fPIC -g -O0 '
+        else
+          @cflags += ' -fPIC -O3 -fno-fast-math -ggdb3 -Os -fdata-sections -ffunction-sections '
+        end
       else
-        @cflags += ' -fPIC -O3 -fno-fast-math -ggdb3 -Os -fdata-sections -ffunction-sections -pipe '
+        if @options[:debug]
+          @cflags += ' -fPIC -g -O0 -pipe '
+        else
+          @cflags += ' -fPIC -O3 -fno-fast-math -ggdb3 -Os -fdata-sections -ffunction-sections -pipe '
+        end
       end
     end
 
