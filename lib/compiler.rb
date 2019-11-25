@@ -965,7 +965,7 @@ class Compiler
       if @options[:debug]
         @cflags += ' -fPIC -g -O0 -pipe '
       else
-        @cflags += ' -fPIC -O3 -fno-fast-math -ggdb3 -Os -fdata-sections -ffunction-sections -pipe '
+        @cflags += ' -fPIC -O1 -fno-fast-math -g0 -fdata-sections -ffunction-sections -pipe '
       end
     end
 
