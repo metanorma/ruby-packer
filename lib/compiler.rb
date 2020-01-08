@@ -155,7 +155,6 @@ class Compiler
   end
 
   def stuff_openssl
-    return if Gem.win_platform? # TODO
     target = File.join(@options[:tmpdir], 'openssl')
     unless Dir.exist?(target)
       @utils.cp_r(File.join(PRJ_ROOT, 'vendor', 'openssl'), target, preserve: true)
@@ -167,7 +166,9 @@ class Compiler
           File.utime(Time.at(0), Time.at(0), x)
         end
         if Gem.win_platform?
-          # TODO
+          @utils.run(@compile_env, "perl Configure VC-WIN64A --prefix=\"#{target}\"")
+          @utils.run(@compile_env, 'nmake')
+          @utils.run(@compile_env, 'nmake install')
         else
           @utils.run(@compile_env, './config')
           @utils.run(@compile_env, "make #{@options[:make_args]}")
@@ -787,6 +788,9 @@ class Compiler
     if Gem.win_platform?
       @ldflags += " -libpath:#{@utils.escape File.join(@options[:tmpdir], 'zlib').gsub('/', '\\')} #{@utils.escape File.join(@options[:tmpdir], 'zlib', 'zlib.lib')} "
       @cflags += " -I#{@utils.escape File.join(@options[:tmpdir], 'zlib')} "
+      @ldflags += " -libpath:#{@utils.escape File.join(@options[:tmpdir], 'openssl')} #{@utils.escape File.join(@options[:tmpdir], 'openssl', 'lib', 'libcrypto.lib')} "
+      @ldflags += " -libpath:#{@utils.escape File.join(@options[:tmpdir], 'openssl')} #{@utils.escape File.join(@options[:tmpdir], 'openssl', 'lib', 'libssl.lib')} "
+      @cflags += " -I#{@utils.escape File.join(@options[:tmpdir], 'openssl', 'include')} "
     else
       @ldflags += " -L#{@utils.escape File.join(@options[:tmpdir], 'zlib')} #{@utils.escape File.join(@options[:tmpdir], 'zlib', 'libz.a')} "
       @cflags += " -I#{@utils.escape File.join(@options[:tmpdir], 'zlib')} "
