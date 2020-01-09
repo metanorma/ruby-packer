@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.date = "2015-04-21"
   s.description = "Provides telnet client functionality."
   s.email = ["hsbt@ruby-lang.org"]
-  s.files = [".gitignore", ".travis.yml", "Gemfile", "LICENSE.txt", "README.md", "Rakefile", "bin/console", "bin/setup", "lib/net-telnet.rb", "lib/net/telnet.rb", "lib/net/telnet/version.rb", "net-telnet.gemspec"]
+  s.files = [".travis.yml", "Gemfile", "LICENSE.txt", "README.md", "Rakefile", "bin/console", "bin/setup", "lib/net-telnet.rb", "lib/net/telnet.rb", "lib/net/telnet/version.rb", "net-telnet.gemspec"]
   s.homepage = "https://github.com/ruby/net-telnet"
   s.rubygems_version = "2.4.5"
   s.summary = "Provides telnet client functionality."
