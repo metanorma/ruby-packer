@@ -21,7 +21,7 @@ STATICLIB = zlib.lib
 SHAREDLIB = zlib1.dll
 IMPLIB    = zdll.lib
 
-CC = cl
+CC = clang-cl
 AS = ml
 LD = link
 AR = lib

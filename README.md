@@ -80,6 +80,41 @@ Unzip it. Optionally,
 rename it to `rubyc.exe` and put it under `C:\Windows` (or any other directory that is part of `PATH`).
 Execute `rubyc --help` from the command line.
 
+### Install and use Clang on windows
+
+SEQUENCE:
+----------
+0. Install MSVS2019(at least MSVC v142, Win10SDK 10.0.18362, cmake, clang)
+   (c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\ - default installation path)
+1. Install clang 9.0.0 or 8.0.1 (http://releases.llvm.org/9.0.0/LLVM-9.0.0-win64.exe)
+   (during installation be sure checkbox 'add clang to %PATH%' set)
+2. Install ruby 2.6.5-1 devkit x64
+   (https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-2.6.5-1/rubyinstaller-devkit-2.6.5-1-x64.exe)
+3. Install bison and flex
+ 3.1 Install bison (http://gnuwin32.sourceforge.net/downlinks/bison.php)
+   (Path for installation: "C:\bison" - be sure path has no spaces!!!)
+ 3.2 Install flex (http://gnuwin32.sourceforge.net/downlinks/flex.php)
+ 3.3 add bison and flex to path
+   set PATH=%PATH%;C:\bison\bin\
+5. Set %PATH% for msvc
+   set PATH=%PATH%;C:\mcvc2015\VC\bin\
+6. Set envs, libs and headers paths from windows sdk etc.
+   For MSVS 2019 execute in shell:
+   "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+7. Install sed:
+   http://sourceforge.net/projects/gnuwin32/files//sed/4.2.1/sed-4.2.1-setup.exe/download
+8. Install choco and squashfs tools
+   Run powershell as administrator
+   Get-ExecutionPolicy			- should be not 'Restricted'
+   Set-ExecutionPolicy AllSigned
+   Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+   [close/reopen power shell with admin rights]
+   choco install --yes squashfs
+
+Build rubyc with clang:
+-----
+   ruby -Ilib bin\rubyc bin\rubyc -c -o rubyc --nmake-args=CC=clang-cl
+
 ## Usage
 
 If ENTRANCE was not provided, then a single Ruby interpreter executable will be produced.

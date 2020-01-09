@@ -827,6 +827,11 @@ socklist_delete(SOCKET *sockp, int *flagp)
     return ret;
 }
 
+
+#if RUBY_MSVCRT_VERSION >= 80
+    static void set_pioinfo_extra(void);
+#endif
+
 static int w32_cmdvector(const WCHAR *, char ***, UINT, rb_encoding *);
 //
 // Initialization stuff
@@ -841,8 +846,6 @@ rb_w32_sysinit(int *argc, char ***argv)
     size_t i;
 
 #if RUBY_MSVCRT_VERSION >= 80
-    static void set_pioinfo_extra(void);
-
     _CrtSetReportMode(_CRT_ASSERT, 0);
     _set_invalid_parameter_handler(invalid_parameter);
     _RTC_SetErrorFunc(rtc_error_handler);

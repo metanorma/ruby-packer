@@ -246,7 +246,9 @@ int enclose_io_mkdir(const char *path, mode_t mode)
 			return ret_inner;
 		}
 	} else {
-		return mkdir(path, mode);
+		//hack repu1sion
+		//return mkdir(path, mode);
+		return mkdir(path);
 	}
 }
 

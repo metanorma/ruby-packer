@@ -640,7 +640,7 @@ EncloseIOGetFileAttributesExW(
 				mkdir_workdir_expanded,
 				fInfoLevelId,
 				lpFileInformation
-			),
+			)
 		);
 	} else if (enclose_io_is_path_w(lpFileName)) {
 		sqfs_path enclose_io_converted_storage;
