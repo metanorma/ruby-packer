@@ -26,9 +26,11 @@ class Gem::PathSupport
     @home     = env["GEM_HOME"] || Gem.default_dir
 
     # --------- [Enclose.io Hack start] ---------
-    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
+    # WE DO NOT ACCEPT OUTSIDE GEM PATHS    
+    puts("In path support home is: #{@home}")
+    puts("In path support default dir is: #{Gem.default_dir}")
     unless env['ENCLOSE_IO_RUBYC_1ST_PASS']
-      @home = Gem.default_dir unless 0 == @home.index('/__enclose_io_memfs__')
+      @home = Gem.default_dir unless @home =~ /__enclose_io_memfs__/
     end
     # --------- [Enclose.io Hack end] ---------
 
@@ -41,8 +43,9 @@ class Gem::PathSupport
     # --------- [Enclose.io Hack start] ---------
     # WE DO NOT ACCEPT OUTSIDE GEM PATHS
     unless env['ENCLOSE_IO_RUBYC_1ST_PASS']
+      puts("In path support path is: #{@path}")
       @path.keep_if do |x|
-        0 == x.index('/__enclose_io_memfs__')
+        x =~ /__enclose_io_memfs__/
       end
     end
     # --------- [Enclose.io Hack end] ---------
