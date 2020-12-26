@@ -1,5 +1,10 @@
 # Ruby Compiler Changelog
 
+## v0.4.1
+
+- update certificates
+- upgrade to bundler 2.2.3
+
 ## v0.4.0
 
 - upgrade libsquash to v0.8.0
