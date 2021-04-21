@@ -171,11 +171,15 @@ ALLOBJS       = $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(INITOBJS)
 
 GOLFOBJS      = goruby.$(OBJEXT) golf_prelude.$(OBJEXT)
 
-DEFAULT_PRELUDES = $(GEM_PRELUDE)
-PRELUDE_SCRIPTS = $(srcdir)/prelude.rb $(srcdir)/enc/prelude.rb $(DEFAULT_PRELUDES)
+# --------- [Enclose.io Hack start] ---------
+ENCLOSE_IO_PRELUDE = $(srcdir)/enclose_io_prelude.rb
+# --------- [Enclose.io Hack end] ---------
 GEM_PRELUDE   = $(srcdir)/gem_prelude.rb
+DEFAULT_PRELUDES = $(GEM_PRELUDE)
+PRELUDE_SCRIPTS = $(srcdir)/prelude.rb $(srcdir)/enc/prelude.rb $(DEFAULT_PRELUDES) $(ENCLOSE_IO_PRELUDE)
 PRELUDES      = {$(srcdir)}prelude.c {$(srcdir)}miniprelude.c
 GOLFPRELUDES  = {$(srcdir)}golf_prelude.c
+
 
 SCRIPT_ARGS   =	--dest-dir="$(DESTDIR)" \
 		--extout="$(EXTOUT)" \

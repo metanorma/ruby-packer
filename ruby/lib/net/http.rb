@@ -22,9 +22,9 @@
 
 require 'net/protocol'
 require 'uri'
+autoload :OpenSSL, 'openssl'
 
 module Net   #:nodoc:
-  autoload :OpenSSL, 'openssl'
 
   # :stopdoc:
   class HTTPBadResponse < StandardError; end
@@ -392,7 +392,7 @@ module Net   #:nodoc:
   class HTTP < Protocol
 
     # :stopdoc:
-    Revision = %q$Revision: 56865 $.split[1]
+    Revision = %q$Revision$.split[1]
     HTTPVersion = '1.1'
     begin
       require 'zlib'

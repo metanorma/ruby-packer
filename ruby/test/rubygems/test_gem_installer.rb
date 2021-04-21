@@ -62,7 +62,12 @@ if ARGV.first
   end
 end
 
+if Gem.respond_to?(:activate_bin_path)
 load Gem.activate_bin_path('a', 'executable', version)
+else
+gem "a", version
+load Gem.bin_path("a", "executable", version)
+end
     EOF
 
     wrapper = @installer.app_script_text 'executable'
@@ -1440,6 +1445,134 @@ gem 'other', version
       end
       assert_equal 'old_rubygems_required requires RubyGems version < 0. ' +
         "Try 'gem update --system' to update RubyGems itself.", e.message
+    end
+  end
+
+  def test_pre_install_checks_malicious_name
+    spec = util_spec '../malicious', '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate; end
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal '#<Gem::Specification name=../malicious version=1> has an invalid name', e.message
+    end
+  end
+
+  def test_pre_install_checks_malicious_name_before_eval
+    spec = util_spec "malicious\n::Object.const_set(:FROM_EVAL, true)#", '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate(*args); end
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal "#<Gem::Specification name=malicious\n::Object.const_set(:FROM_EVAL, true)# version=1> has an invalid name", e.message
+    end
+    refute defined?(::Object::FROM_EVAL)
+  end
+
+  def test_pre_install_checks_malicious_require_paths_before_eval
+    spec = util_spec "malicious", '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate(*args); end
+    spec.require_paths = ["malicious\n``"]
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal "#<Gem::Specification name=malicious version=1> has an invalid require_paths", e.message
+    end
+  end
+
+  def test_pre_install_checks_malicious_extensions_before_eval
+    skip "mswin environment disallow to create file contained the carriage return code." if Gem.win_platform?
+
+    spec = util_spec "malicious", '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate(*args); end
+    spec.extensions = ["malicious\n``"]
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal "#<Gem::Specification name=malicious version=1> has an invalid extensions", e.message
+    end
+  end
+
+  def test_pre_install_checks_malicious_specification_version_before_eval
+    spec = util_spec "malicious", '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate(*args); end
+    spec.specification_version = "malicious\n``"
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal "#<Gem::Specification name=malicious version=1> has an invalid specification_version", e.message
+    end
+  end
+
+  def test_pre_install_checks_malicious_dependencies_before_eval
+    spec = util_spec "malicious", '1'
+    def spec.full_name # so the spec is buildable
+      "malicious-1"
+    end
+    def spec.validate(*args); end
+    spec.add_dependency "b\nfoo", '> 5'
+
+    util_build_gem spec
+
+    gem = File.join(@gemhome, 'cache', spec.file_name)
+
+    use_ui @ui do
+      @installer = Gem::Installer.at gem
+      @installer.ignore_dependencies = true
+      e = assert_raises Gem::InstallError do
+        @installer.pre_install_checks
+      end
+      assert_equal "#<Gem::Specification name=malicious version=1> has an invalid dependencies", e.message
     end
   end
 

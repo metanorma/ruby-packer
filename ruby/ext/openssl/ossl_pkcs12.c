@@ -178,7 +178,7 @@ ossl_pkcs12_initialize(int argc, VALUE *argv, VALUE self)
 
     if(rb_scan_args(argc, argv, "02", &arg, &pass) == 0) return self;
     passphrase = NIL_P(pass) ? NULL : StringValueCStr(pass);
-    in = ossl_obj2bio(arg);
+    in = ossl_obj2bio(&arg);
     d2i_PKCS12_bio(in, &pkcs);
     DATA_PTR(self) = pkcs;
     BIO_free(in);
@@ -237,6 +237,7 @@ ossl_pkcs12_to_der(VALUE self)
 void
 Init_ossl_pkcs12(void)
 {
+#undef rb_intern
 #if 0
     mOSSL = rb_define_module("OpenSSL");
     eOSSLError = rb_define_class_under(mOSSL, "OpenSSLError", rb_eStandardError);

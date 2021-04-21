@@ -2,7 +2,7 @@
 
   vm_insnhelper.c - instruction helper functions.
 
-  $Author: naruse $
+  $Author$
 
   Copyright (C) 2007 Koichi Sasada
 
@@ -790,7 +790,7 @@ vm_get_ev_const(rb_thread_t *th, VALUE orig_klass, ID id, int is_defined)
 			if (am == klass) break;
 			am = klass;
 			if (is_defined) return 1;
-			if (rb_autoloading_value(klass, id, &av)) return av;
+			if (rb_autoloading_value(klass, id, &av, NULL)) return av;
 			rb_autoload_load(klass, id);
 			goto search_continue;
 		    }
@@ -1039,13 +1039,13 @@ vm_throw_start(rb_thread_t *const th, rb_control_frame_t *const reg_cfp, enum ru
 
 	    while (escape_cfp < eocfp) {
 		if (escape_cfp->ep == ep) {
-		    const VALUE epc = escape_cfp->pc - escape_cfp->iseq->body->iseq_encoded;
-		    const rb_iseq_t * const iseq = escape_cfp->iseq;
-		    const struct iseq_catch_table * const ct = iseq->body->catch_table;
-		    const int ct_size = ct->size;
-		    int i;
+		    const rb_iseq_t *const iseq = escape_cfp->iseq;
+		    const VALUE epc = escape_cfp->pc - iseq->body->iseq_encoded;
+		    const struct iseq_catch_table *const ct = iseq->body->catch_table;
+		    unsigned int i;
 
-		    for (i=0; i<ct_size; i++) {
+		    if (!ct) break;
+		    for (i=0; i < ct->size; i++) {
 			const struct iseq_catch_table_entry * const entry = &ct->entries[i];
 
 			if (entry->type == CATCH_TYPE_BREAK && entry->start < epc && entry->end >= epc) {
@@ -1080,6 +1080,7 @@ vm_throw_start(rb_thread_t *const th, rb_control_frame_t *const reg_cfp, enum ru
 	const VALUE *current_ep = GET_EP();
 	const VALUE *target_lep = VM_EP_LEP(current_ep);
 	int in_class_frame = 0;
+	int toplevel = 1;
 	escape_cfp = reg_cfp;
 
 	while (escape_cfp < eocfp) {
@@ -1098,6 +1099,7 @@ vm_throw_start(rb_thread_t *const th, rb_control_frame_t *const reg_cfp, enum ru
 
 	    if (lep == target_lep) {
 		if (VM_FRAME_TYPE(escape_cfp) == VM_FRAME_MAGIC_LAMBDA) {
+		    toplevel = 0;
 		    if (in_class_frame) {
 			/* lambda {class A; ... return ...; end} */
 			goto valid_return;
@@ -1112,6 +1114,20 @@ vm_throw_start(rb_thread_t *const th, rb_control_frame_t *const reg_cfp, enum ru
 			    }
 			    tep = VM_ENV_PREV_EP(tep);
 			}
+		    }
+		}
+		else if (VM_FRAME_RUBYFRAME_P(escape_cfp)) {
+		    switch (escape_cfp->iseq->body->type) {
+		      case ISEQ_TYPE_TOP:
+		      case ISEQ_TYPE_MAIN:
+			if (toplevel) goto valid_return;
+			break;
+		      case ISEQ_TYPE_EVAL:
+		      case ISEQ_TYPE_CLASS:
+			toplevel = 0;
+			break;
+		      default:
+			break;
 		    }
 		}
 	    }
@@ -1320,7 +1336,8 @@ check_match(VALUE pattern, VALUE target, enum vm_check_match_type type)
 	}
 	/* fall through */
       case VM_CHECKMATCH_TYPE_CASE: {
-	const rb_callable_method_entry_t *me = rb_callable_method_entry_with_refinements(CLASS_OF(pattern), idEqq);
+	const rb_callable_method_entry_t *me =
+	    rb_callable_method_entry_with_refinements(CLASS_OF(pattern), idEqq, NULL);
 	if (me) {
 	    return vm_call0(GET_THREAD(), pattern, idEqq, 1, &target, me);
 	}
@@ -1956,7 +1973,7 @@ vm_call_opt_send(rb_thread_t *th, rb_control_frame_t *reg_cfp, struct rb_calling
 	DEC_SP(1);
     }
 
-    cc->me = rb_callable_method_entry_with_refinements(CLASS_OF(calling->recv), ci->mid);
+    cc->me = rb_callable_method_entry_with_refinements(CLASS_OF(calling->recv), ci->mid, NULL);
     ci->flag = VM_CALL_FCALL | VM_CALL_OPT_SEND;
     return vm_call_method(th, reg_cfp, calling, ci, cc);
 }
@@ -1999,7 +2016,7 @@ vm_call_method_missing(rb_thread_t *th, rb_control_frame_t *reg_cfp, struct rb_c
     cc_entry = *orig_cc;
     cc_entry.me =
 	rb_callable_method_entry_without_refinements(CLASS_OF(calling->recv),
-						     idMethodMissing);
+						     idMethodMissing, NULL);
     cc = &cc_entry;
 
     calling->argc = argc;
@@ -2193,44 +2210,45 @@ vm_call_method_each_type(rb_thread_t *th, rb_control_frame_t *cfp, struct rb_cal
 	return vm_call_zsuper(th, cfp, calling, ci, cc, RCLASS_ORIGIN(cc->me->owner));
 
       case VM_METHOD_TYPE_REFINED: {
-	  const rb_cref_t *cref = rb_vm_get_cref(cfp->ep);
-	  VALUE refinements = cref ? CREF_REFINEMENTS(cref) : Qnil;
-	  VALUE refinement;
-	  const rb_callable_method_entry_t *ref_me;
+	const rb_cref_t *cref = rb_vm_get_cref(cfp->ep);
+	VALUE refinements = cref ? CREF_REFINEMENTS(cref) : Qnil;
+	VALUE refinement;
+	const rb_callable_method_entry_t *ref_me;
 
-	  refinement = find_refinement(refinements, cc->me->owner);
+	refinement = find_refinement(refinements, cc->me->owner);
 
-	  if (NIL_P(refinement)) {
-	      goto no_refinement_dispatch;
-	  }
-	  ref_me = rb_callable_method_entry(refinement, ci->mid);
+	if (NIL_P(refinement)) {
+	    goto no_refinement_dispatch;
+	}
+	ref_me = rb_callable_method_entry(refinement, ci->mid);
 
-	  if (ref_me) {
-	      if (cc->call == vm_call_super_method) {
-		  const rb_control_frame_t *top_cfp = current_method_entry(th, cfp);
-		  const rb_callable_method_entry_t *top_me = rb_vm_frame_method_entry(top_cfp);
-		  if (top_me && rb_method_definition_eq(ref_me->def, top_me->def)) {
-		      goto no_refinement_dispatch;
-		  }
-	      }
-	      cc->me = ref_me;
-	      if (ref_me->def->type != VM_METHOD_TYPE_REFINED) {
-		  return vm_call_method(th, cfp, calling, ci, cc);
-	      }
-	  }
-	  else {
-	      cc->me = NULL;
-	      return vm_call_method_nome(th, cfp, calling, ci, cc);
-	  }
+	if (ref_me) {
+	    if (cc->call == vm_call_super_method) {
+		const rb_control_frame_t *top_cfp = current_method_entry(th, cfp);
+		const rb_callable_method_entry_t *top_me = rb_vm_frame_method_entry(top_cfp);
+		if (top_me && rb_method_definition_eq(ref_me->def, top_me->def)) {
+		    goto no_refinement_dispatch;
+		}
+	    }
+	    cc->me = ref_me;
+	    if (ref_me->def->type != VM_METHOD_TYPE_REFINED) {
+		return vm_call_method(th, cfp, calling, ci, cc);
+	    }
+	}
+	else {
+	    cc->me = NULL;
+	    return vm_call_method_nome(th, cfp, calling, ci, cc);
+	}
 
-	no_refinement_dispatch:
-	  if (cc->me->def->body.refined.orig_me) {
-	      cc->me = refined_method_callable_without_refinement(cc->me);
-	      return vm_call_method(th, cfp, calling, ci, cc);
-	  }
-	  else {
-	      return vm_call_zsuper(th, cfp, calling, ci, cc, cc->me->owner);
-	  }
+      no_refinement_dispatch:
+	if (cc->me->def->body.refined.orig_me) {
+	    cc->me = refined_method_callable_without_refinement(cc->me);
+	}
+	else {
+	    VALUE klass = RCLASS_SUPER(cc->me->owner);
+	    cc->me = klass ? rb_callable_method_entry(klass, ci->mid) : NULL;
+	}
+	return vm_call_method(th, cfp, calling, ci, cc);
       }
     }
 

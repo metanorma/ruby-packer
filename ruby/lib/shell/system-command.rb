@@ -2,7 +2,7 @@
 #
 #   shell/system-command.rb -
 #       $Release Version: 0.7 $
-#       $Revision: 56037 $
+#       $Revision$
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

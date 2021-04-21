@@ -2,7 +2,7 @@
 
   thread.c -
 
-  $Author: naruse $
+  $Author$
 
   Copyright (C) 2004-2007 Koichi Sasada
 
@@ -95,7 +95,11 @@ static int rb_threadptr_pending_interrupt_empty_p(rb_thread_t *th);
 #define eTerminateSignal INT2FIX(1)
 static volatile int system_working = 1;
 
-#define closed_stream_error GET_VM()->special_exceptions[ruby_error_closed_stream]
+struct waiting_fd {
+    struct list_node wfd_node; /* <=> vm.waiting_fds */
+    rb_thread_t *th;
+    int fd;
+};
 
 inline static void
 st_delete_wrap(st_table *table, st_data_t key)
@@ -381,7 +385,7 @@ set_unblock_function(rb_thread_t *th, rb_unblock_function_t *func, void *arg,
 	}
 
 	native_mutex_lock(&th->interrupt_lock);
-    } while (RUBY_VM_INTERRUPTED_ANY(th) &&
+    } while (!th->raised_flag && RUBY_VM_INTERRUPTED_ANY(th) &&
 	     (native_mutex_unlock(&th->interrupt_lock), TRUE));
 
     if (old) *old = th->unblock;
@@ -626,19 +630,20 @@ thread_start_func_2(rb_thread_t *th, VALUE *stack_start, VALUE *register_stack_s
 	    else if (rb_obj_is_kind_of(errinfo, rb_eSystemExit)) {
 		/* exit on main_thread. */
 	    }
-	    else if (th->vm->thread_abort_on_exception ||
-		     th->abort_on_exception || RTEST(ruby_debug)) {
-		/* exit on main_thread */
-	    }
-	    else if (th->report_on_exception) {
-		VALUE mesg = rb_thread_inspect(th->self);
-		rb_str_cat_cstr(mesg, " terminated with exception:\n");
-		rb_write_error_str(mesg);
-		rb_threadptr_error_print(th, errinfo);
-		errinfo = Qnil;
-	    }
 	    else {
-		errinfo = Qnil;
+		if (th->report_on_exception) {
+		    VALUE mesg = rb_thread_inspect(th->self);
+		    rb_str_cat_cstr(mesg, " terminated with exception:\n");
+		    rb_write_error_str(mesg);
+		    rb_threadptr_error_print(th, errinfo);
+		}
+		if (th->vm->thread_abort_on_exception ||
+		    th->abort_on_exception || RTEST(ruby_debug)) {
+		    /* exit on main_thread */
+		}
+		else {
+		    errinfo = Qnil;
+		}
 	    }
 	    th->value = Qnil;
 	}
@@ -684,10 +689,8 @@ thread_start_func_2(rb_thread_t *th, VALUE *stack_start, VALUE *register_stack_s
 	rb_threadptr_unlock_all_locking_mutexes(th);
 	rb_check_deadlock(th->vm);
 
-	if (!th->root_fiber) {
-	    rb_thread_recycle_stack_release(th->stack);
-	    th->stack = 0;
-	}
+	rb_thread_recycle_stack_release(th->stack);
+	th->stack = NULL;
     }
     native_mutex_lock(&th->vm->thread_destruct_lock);
     /* make sure vm->running_thread never point me after this point.*/
@@ -1310,7 +1313,6 @@ call_without_gvl(void *(*func)(void *), void *data1,
     rb_thread_t *th = GET_THREAD();
     int saved_errno = 0;
 
-    th->waiting_fd = -1;
     if (ubf == RUBY_UBF_IO || ubf == RUBY_UBF_PROCESS) {
 	ubf = ubf_select;
 	data2 = th;
@@ -1433,11 +1435,15 @@ VALUE
 rb_thread_io_blocking_region(rb_blocking_function_t *func, void *data1, int fd)
 {
     volatile VALUE val = Qundef; /* shouldn't be used */
+    rb_vm_t *vm = GET_VM();
     rb_thread_t *th = GET_THREAD();
     volatile int saved_errno = 0;
     int state;
+    struct waiting_fd wfd;
 
-    th->waiting_fd = fd;
+    wfd.fd = fd;
+    wfd.th = th;
+    list_add(&vm->waiting_fds, &wfd.wfd_node);
 
     TH_PUSH_TAG(th);
     if ((state = EXEC_TAG()) == 0) {
@@ -1448,8 +1454,8 @@ rb_thread_io_blocking_region(rb_blocking_function_t *func, void *data1, int fd)
     }
     TH_POP_TAG();
 
-    /* clear waiting_fd anytime */
-    th->waiting_fd = -1;
+    /* must be deleted before jump */
+    list_del(&wfd.wfd_node);
 
     if (state) {
 	TH_JUMP_TAG(th, state);
@@ -2195,16 +2201,23 @@ int
 rb_notify_fd_close(int fd)
 {
     rb_vm_t *vm = GET_THREAD()->vm;
-    rb_thread_t *th = 0;
+    struct waiting_fd *wfd = 0;
     int busy;
 
     busy = 0;
-    list_for_each(&vm->living_threads, th, vmlt_node) {
-	if (th->waiting_fd == fd) {
-	    VALUE err = th->vm->special_exceptions[ruby_error_closed_stream];
+    list_for_each(&vm->waiting_fds, wfd, wfd_node) {
+	if (wfd->fd == fd) {
+	    rb_thread_t *th = wfd->th;
+	    VALUE err;
+
+	    busy = 1;
+	    if (!th) {
+		continue;
+	    }
+	    wfd->th = 0;
+	    err = th->vm->special_exceptions[ruby_error_stream_closed];
 	    rb_threadptr_pending_interrupt_enque(th, err);
 	    rb_threadptr_interrupt(th);
-	    busy = 1;
 	}
     }
     return busy;
@@ -2213,7 +2226,7 @@ rb_notify_fd_close(int fd)
 void
 rb_thread_fd_close(int fd)
 {
-    while (rb_notify_fd_close(fd));
+    while (rb_notify_fd_close(fd)) rb_thread_schedule();
 }
 
 /*
@@ -3691,23 +3704,53 @@ update_timeval(struct timeval *timeout, double limit)
     }
 }
 
+struct select_set {
+    rb_fdset_t read;
+    rb_fdset_t write;
+    rb_fdset_t except;
+};
+
+static size_t
+select_set_memsize(const void *p)
+{
+    return sizeof(struct select_set);
+}
+
+static void
+select_set_free(void *p)
+{
+    struct select_set *orig = p;
+
+    rb_fd_term(&orig->read);
+    rb_fd_term(&orig->write);
+    rb_fd_term(&orig->except);
+    xfree(orig);
+}
+
+static const rb_data_type_t select_set_type = {
+    "select_set",
+    {NULL, select_set_free, select_set_memsize,},
+    0, 0, RUBY_TYPED_FREE_IMMEDIATELY
+};
+
 static int
 do_select(int n, rb_fdset_t *readfds, rb_fdset_t *writefds,
 	  rb_fdset_t *exceptfds, struct timeval *timeout)
 {
     int MAYBE_UNUSED(result);
     int lerrno;
-    rb_fdset_t MAYBE_UNUSED(orig_read);
-    rb_fdset_t MAYBE_UNUSED(orig_write);
-    rb_fdset_t MAYBE_UNUSED(orig_except);
     double limit = 0;
     struct timeval wait_rest;
     rb_thread_t *th = GET_THREAD();
+    VALUE o;
+    struct select_set *orig;
+
+    o = TypedData_Make_Struct(0, struct select_set, &select_set_type, orig);
 
 #define do_select_update() \
-    (restore_fdset(readfds, &orig_read), \
-     restore_fdset(writefds, &orig_write), \
-     restore_fdset(exceptfds, &orig_except), \
+    (restore_fdset(readfds, &orig->read), \
+     restore_fdset(writefds, &orig->write), \
+     restore_fdset(exceptfds, &orig->except), \
      update_timeval(timeout, limit), \
      TRUE)
 
@@ -3719,7 +3762,7 @@ do_select(int n, rb_fdset_t *readfds, rb_fdset_t *writefds,
     }
 
 #define fd_init_copy(f) \
-    (f##fds) ? rb_fd_init_copy(&orig_##f, f##fds) : rb_fd_no_init(&orig_##f)
+    (f##fds) ? rb_fd_init_copy(&orig->f, f##fds) : rb_fd_no_init(&orig->f)
     fd_init_copy(read);
     fd_init_copy(write);
     fd_init_copy(except);
@@ -3734,14 +3777,13 @@ do_select(int n, rb_fdset_t *readfds, rb_fdset_t *writefds,
 	    if (result < 0) lerrno = errno;
 	}, ubf_select, th, FALSE);
 
-	RUBY_VM_CHECK_INTS_BLOCKING(th);
+	RUBY_VM_CHECK_INTS_BLOCKING(th); /* may raise */
     } while (result < 0 && retryable(errno = lerrno) && do_select_update());
 
-#define fd_term(f) if (f##fds) rb_fd_term(&orig_##f)
-    fd_term(read);
-    fd_term(write);
-    fd_term(except);
-#undef fd_term
+    /* didn't raise, perform cleanup ourselves */
+    select_set_free(orig);
+    rb_gc_force_recycle(o);
+
 
     return result;
 }
@@ -4839,7 +4881,7 @@ Init_Thread(void)
     rb_define_method(rb_cThread, "name=", rb_thread_setname, 1);
     rb_define_method(rb_cThread, "inspect", rb_thread_inspect, 0);
 
-    rb_vm_register_special_exception(ruby_error_closed_stream, rb_eIOError, "stream closed");
+    rb_vm_register_special_exception(ruby_error_stream_closed, rb_eIOError, "stream closed");
 
     cThGroup = rb_define_class("ThreadGroup", rb_cObject);
     rb_define_alloc_func(cThGroup, thgroup_s_alloc);

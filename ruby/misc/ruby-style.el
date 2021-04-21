@@ -4,7 +4,7 @@
 ;;;
 ;;; C/C++ mode style for Ruby.
 ;;;
-;;;  $Author: nobu $
+;;;  $Author$
 ;;;  created at: Thu Apr 26 13:54:01 JST 2007
 ;;;
 ;;; Put this file under a directory contained in ``load-path'', and
@@ -19,7 +19,7 @@
 ;;; Customize the c-default-style variable to set the default style
 ;;; for each CC major mode.
 
-(defconst ruby-style-revision "$Revision: 53967 $"
+(defconst ruby-style-revision "$Revision$"
   "Ruby style revision string.")
 
 (defconst ruby-style-version

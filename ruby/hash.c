@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: naruse $
+  $Author$
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -198,8 +198,16 @@ any_hash(VALUE a, st_index_t (*other_func)(VALUE))
 	hnum = other_func(a);
     }
   out:
+#if SIZEOF_LONG < SIZEOF_ST_INDEX_T
+    if (hnum > 0)
+	hnum &= (unsigned long)-1 >> 2;
+    else
+	hnum |= ~((unsigned long)-1 >> 2);
+#else
     hnum <<= 1;
-    return (long)RSHIFT(hnum, 1);
+    hnum = RSHIFT(hnum, 1);
+#endif
+    return (long)hnum;
 }
 
 static st_index_t
@@ -227,8 +235,8 @@ static const uint64_t prime2 = ((uint64_t)0xcdb32970 << 32) | 0x830fcaa1;
 static inline uint64_t
 mult_and_mix(uint64_t m1, uint64_t m2)
 {
-#if defined(__GNUC__) && UINT_MAX != ULONG_MAX
-    __uint128_t r = (__uint128_t) m1 * (__uint128_t) m2;
+#if defined HAVE_UINT128_T
+    uint128_t r = (uint128_t) m1 * (uint128_t) m2;
     return (uint64_t) (r >> 64) ^ (uint64_t) r;
 #else
     uint64_t hm1 = m1 >> 32, hm2 = m2 >> 32;
@@ -3128,6 +3136,9 @@ env_str_new2(const char *ptr)
 
 static int env_path_tainted(const char *);
 
+static const char TZ_ENV[] = "TZ";
+extern int ruby_tz_update;
+
 static rb_encoding *
 env_encoding_for(const char *name, const char *ptr)
 {
@@ -3208,6 +3219,9 @@ env_delete(VALUE obj, VALUE name)
 	if (ENVMATCH(nam, PATH_ENV)) {
 	    RB_GC_GUARD(name);
 	    path_tainted = 0;
+	}
+	else if (ENVMATCH(nam, TZ_ENV)) {
+	    ruby_tz_update = 0;
 	}
 	return value;
     }
@@ -3567,6 +3581,9 @@ env_aset(VALUE obj, VALUE nm, VALUE val)
 	else {
 	    path_tainted_p(value);
 	}
+    }
+    else if (ENVMATCH(name, TZ_ENV)) {
+	ruby_tz_update = 0;
     }
     return val;
 }

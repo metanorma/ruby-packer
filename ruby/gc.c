@@ -2,7 +2,7 @@
 
   gc.c -
 
-  $Author: ktsj $
+  $Author$
   created at: Tue Oct  5 09:44:46 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1358,6 +1358,29 @@ rb_objspace_free(rb_objspace_t *objspace)
 }
 
 static void
+heap_pages_expand_sorted_to(rb_objspace_t *objspace, size_t next_length)
+{
+    struct heap_page **sorted;
+    size_t size = next_length * sizeof(struct heap_page *);
+
+    gc_report(3, objspace, "heap_pages_expand_sorted: next_length: %d, size: %d\n", (int)next_length, (int)size);
+
+    if (heap_pages_sorted_length > 0) {
+	sorted = (struct heap_page **)realloc(heap_pages_sorted, size);
+	if (sorted) heap_pages_sorted = sorted;
+    }
+    else {
+	sorted = heap_pages_sorted = (struct heap_page **)malloc(size);
+    }
+
+    if (sorted == 0) {
+	rb_memerror();
+    }
+
+    heap_pages_sorted_length = next_length;
+}
+
+static void
 heap_pages_expand_sorted(rb_objspace_t *objspace)
 {
     size_t next_length = heap_allocatable_pages;
@@ -1365,24 +1388,7 @@ heap_pages_expand_sorted(rb_objspace_t *objspace)
     next_length += heap_tomb->total_pages;
 
     if (next_length > heap_pages_sorted_length) {
-	struct heap_page **sorted;
-	size_t size = next_length * sizeof(struct heap_page *);
-
-	gc_report(3, objspace, "heap_pages_expand_sorted: next_length: %d, size: %d\n", (int)next_length, (int)size);
-
-	if (heap_pages_sorted_length > 0) {
-	    sorted = (struct heap_page **)realloc(heap_pages_sorted, size);
-	    if (sorted) heap_pages_sorted = sorted;
-	}
-	else {
-	    sorted = heap_pages_sorted = (struct heap_page **)malloc(size);
-	}
-
-	if (sorted == 0) {
-	    rb_memerror();
-	}
-
-	heap_pages_sorted_length = next_length;
+	heap_pages_expand_sorted_to(objspace, next_length);
     }
 }
 
@@ -1520,6 +1526,9 @@ heap_page_allocate(rb_objspace_t *objspace)
 	    rb_bug("same heap page is allocated: %p at %"PRIuVALUE, (void *)page_body, (VALUE)mid);
 	}
     }
+    if (heap_allocated_pages >= heap_pages_sorted_length) {
+	heap_pages_expand_sorted_to(objspace, heap_allocated_pages + 1);
+    }
     if (hi < heap_allocated_pages) {
 	MEMMOVE(&heap_pages_sorted[hi+1], &heap_pages_sorted[hi], struct heap_page_header*, heap_allocated_pages - hi);
     }
@@ -1529,7 +1538,10 @@ heap_page_allocate(rb_objspace_t *objspace)
     heap_allocated_pages++;
     objspace->profile.total_allocated_pages++;
 
-    if (RGENGC_CHECK_MODE) assert(heap_allocated_pages <= heap_pages_sorted_length);
+    if (heap_allocated_pages > heap_pages_sorted_length) {
+	rb_bug("heap_page_allocate: allocated(%"PRIdSIZE") > sorted(%"PRIdSIZE")",
+	       heap_allocated_pages, heap_pages_sorted_length);
+    }
 
     if (heap_pages_lomem == 0 || heap_pages_lomem > start) heap_pages_lomem = start;
     if (heap_pages_himem < end) heap_pages_himem = end;
@@ -2716,17 +2728,20 @@ run_finalizer(rb_objspace_t *objspace, VALUE obj, VALUE table)
     volatile struct {
 	VALUE errinfo;
 	VALUE objid;
+	rb_control_frame_t *cfp;
 	long finished;
 	int safe;
     } saved;
     rb_thread_t *const th = GET_THREAD();
 #define RESTORE_FINALIZER() (\
+	th->cfp = saved.cfp, \
 	rb_set_safe_level_force(saved.safe), \
 	rb_set_errinfo(saved.errinfo))
 
     saved.safe = rb_safe_level();
     saved.errinfo = rb_errinfo();
     saved.objid = nonspecial_obj_id(obj);
+    saved.cfp = th->cfp;
     saved.finished = 0;
 
     TH_PUSH_TAG(th);
@@ -3445,11 +3460,11 @@ gc_page_sweep(rb_objspace_t *objspace, rb_heap_t *heap, struct heap_page *sweep_
 		if (bitset & 1) {
 		    switch (BUILTIN_TYPE(p)) {
 		      default: { /* majority case */
-			  gc_report(2, objspace, "page_sweep: free %s\n", obj_info((VALUE)p));
+			  gc_report(2, objspace, "page_sweep: free %p\n", (void *)p);
 #if USE_RGENGC && RGENGC_CHECK_MODE
 			  if (!is_full_marking(objspace)) {
-			      if (RVALUE_OLD_P((VALUE)p)) rb_bug("page_sweep: %s - old while minor GC.", obj_info((VALUE)p));
-			      if (rgengc_remembered(objspace, (VALUE)p)) rb_bug("page_sweep: %s - remembered.", obj_info((VALUE)p));
+			      if (RVALUE_OLD_P((VALUE)p)) rb_bug("page_sweep: %p - old while minor GC.", (void *)p);
+			      if (rgengc_remembered(objspace, (VALUE)p)) rb_bug("page_sweep: %p - remembered.", (void *)p);
 			  }
 #endif
 			  if (obj_free(objspace, (VALUE)p)) {
@@ -5862,18 +5877,18 @@ NOINLINE(static void gc_writebarrier_incremental(VALUE a, VALUE b, rb_objspace_t
 static void
 gc_writebarrier_incremental(VALUE a, VALUE b, rb_objspace_t *objspace)
 {
-    gc_report(2, objspace, "gc_writebarrier_incremental: [LG] %s -> %s\n", obj_info(a), obj_info(b));
+    gc_report(2, objspace, "gc_writebarrier_incremental: [LG] %p -> %s\n", (void *)a, obj_info(b));
 
     if (RVALUE_BLACK_P(a)) {
 	if (RVALUE_WHITE_P(b)) {
 	    if (!RVALUE_WB_UNPROTECTED(a)) {
-		gc_report(2, objspace, "gc_writebarrier_incremental: [IN] %s -> %s\n", obj_info(a), obj_info(b));
+		gc_report(2, objspace, "gc_writebarrier_incremental: [IN] %p -> %s\n", (void *)a, obj_info(b));
 		gc_mark_from(objspace, b, a);
 	    }
 	}
 	else if (RVALUE_OLD_P(a) && !RVALUE_OLD_P(b)) {
 	    if (!RVALUE_WB_UNPROTECTED(b)) {
-		gc_report(1, objspace, "gc_writebarrier_incremental: [GN] %s -> %s\n", obj_info(a), obj_info(b));
+		gc_report(1, objspace, "gc_writebarrier_incremental: [GN] %p -> %s\n", (void *)a, obj_info(b));
 		RVALUE_AGE_SET_OLD(objspace, b);
 
 		if (RVALUE_BLACK_P(b)) {
@@ -5881,7 +5896,7 @@ gc_writebarrier_incremental(VALUE a, VALUE b, rb_objspace_t *objspace)
 		}
 	    }
 	    else {
-		gc_report(1, objspace, "gc_writebarrier_incremental: [LL] %s -> %s\n", obj_info(a), obj_info(b));
+		gc_report(1, objspace, "gc_writebarrier_incremental: [LL] %p -> %s\n", (void *)a, obj_info(b));
 		gc_remember_unprotected(objspace, b);
 	    }
 	}
@@ -9192,11 +9207,12 @@ method_type_name(rb_method_type_t type)
 static void
 rb_raw_iseq_info(char *buff, const int buff_size, const rb_iseq_t *iseq)
 {
-    if (iseq->body->location.label) {
+    if (iseq->body && iseq->body->location.label) {
+	VALUE n = iseq->body->location.first_lineno;
 	snprintf(buff, buff_size, "%s %s@%s:%d", buff,
 		 RSTRING_PTR(iseq->body->location.label),
 		 RSTRING_PTR(iseq->body->location.path),
-		 FIX2INT(iseq->body->location.first_lineno));
+		 n ? FIX2INT(n) : 0 );
     }
 }
 
@@ -9256,64 +9272,73 @@ rb_raw_obj_info(char *buff, const int buff_size, VALUE obj)
 		     (int)RARRAY_LEN(obj));
 	    break;
 	  case T_STRING: {
-	      snprintf(buff, buff_size, "%s %s", buff, RSTRING_PTR(obj));
-	      break;
+	    snprintf(buff, buff_size, "%s %s", buff, RSTRING_PTR(obj));
+	    break;
 	  }
 	  case T_CLASS: {
-	      VALUE class_path = rb_class_path_cached(obj);
-	      if (!NIL_P(class_path)) {
-		  snprintf(buff, buff_size, "%s %s", buff, RSTRING_PTR(class_path));
-	      }
-	      break;
+	    VALUE class_path = rb_class_path_cached(obj);
+	    if (!NIL_P(class_path)) {
+		snprintf(buff, buff_size, "%s %s", buff, RSTRING_PTR(class_path));
+	    }
+	    break;
 	  }
 	  case T_DATA: {
-	      const rb_iseq_t *iseq;
-	      if (rb_obj_is_proc(obj) && (iseq = vm_proc_iseq(obj)) != NULL) {
-		  rb_raw_iseq_info(buff, buff_size, iseq);
-	      }
-	      else {
-		  const char * const type_name = rb_objspace_data_type_name(obj);
-		  if (type_name) {
-		      snprintf(buff, buff_size, "%s %s", buff, type_name);
-		  }
-	      }
-	      break;
+	    const struct rb_block *block;
+	    const rb_iseq_t *iseq;
+	    if (rb_obj_is_proc(obj) &&
+		(block = vm_proc_block(obj)) != NULL &&
+		(vm_block_type(block) == block_type_iseq) &&
+		(iseq = vm_block_iseq(block)) != NULL) {
+		rb_raw_iseq_info(buff, buff_size, iseq);
+	    }
+	    else {
+		const char * const type_name = rb_objspace_data_type_name(obj);
+		if (type_name) {
+		    snprintf(buff, buff_size, "%s %s", buff, type_name);
+		}
+	    }
+	    break;
 	  }
 	  case T_IMEMO: {
-	      const char *imemo_name;
-	      switch (imemo_type(obj)) {
+	    const char *imemo_name = "\0";
+	    switch (imemo_type(obj)) {
 #define IMEMO_NAME(x) case imemo_##x: imemo_name = #x; break;
-		  IMEMO_NAME(env);
-		  IMEMO_NAME(cref);
-		  IMEMO_NAME(svar);
-		  IMEMO_NAME(throw_data);
-		  IMEMO_NAME(ifunc);
-		  IMEMO_NAME(memo);
-		  IMEMO_NAME(ment);
-		  IMEMO_NAME(iseq);
+		IMEMO_NAME(env);
+		IMEMO_NAME(cref);
+		IMEMO_NAME(svar);
+		IMEMO_NAME(throw_data);
+		IMEMO_NAME(ifunc);
+		IMEMO_NAME(memo);
+		IMEMO_NAME(ment);
+		IMEMO_NAME(iseq);
 #undef IMEMO_NAME
-	      }
-	      snprintf(buff, buff_size, "%s %s", buff, imemo_name);
+	    }
+	    snprintf(buff, buff_size, "%s %s", buff, imemo_name);
 
-	      switch (imemo_type(obj)) {
-		case imemo_ment: {
-		    const rb_method_entry_t *me = &RANY(obj)->as.imemo.ment;
+	    switch (imemo_type(obj)) {
+	      case imemo_ment: {
+		const rb_method_entry_t *me = &RANY(obj)->as.imemo.ment;
+		if (me->def) {
 		    snprintf(buff, buff_size, "%s (called_id: %s, type: %s, alias: %d, owner: %s, defined_class: %s)", buff,
 			     rb_id2name(me->called_id),
 			     method_type_name(me->def->type),
 			     me->def->alias_count,
 			     obj_info(me->owner),
 			     obj_info(me->defined_class));
-		    break;
 		}
-		case imemo_iseq: {
-		    const rb_iseq_t *iseq = (const rb_iseq_t *)obj;
-		    rb_raw_iseq_info(buff, buff_size, iseq);
-		    break;
+		else {
+		    snprintf(buff, buff_size, "%s", rb_id2name(me->called_id));
 		}
-		default:
-		  break;
+		break;
 	      }
+	      case imemo_iseq: {
+		const rb_iseq_t *iseq = (const rb_iseq_t *)obj;
+		rb_raw_iseq_info(buff, buff_size, iseq);
+		break;
+	      }
+	      default:
+		break;
+	    }
 	  }
 	  default:
 	    break;

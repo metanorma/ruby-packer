@@ -1,5 +1,5 @@
 /* $RoughId: sha2init.c,v 1.3 2001/07/13 20:00:43 knu Exp $ */
-/* $Id: sha2init.c 52694 2015-11-21 04:35:57Z naruse $ */
+/* $Id$ */
 
 #include <ruby/ruby.h>
 #include "../digest.h"

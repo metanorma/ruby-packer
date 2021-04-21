@@ -284,6 +284,34 @@ class TestFile < Test::Unit::TestCase
     }
   end
 
+  def test_realpath_special_symlink
+    IO.pipe do |r, w|
+      if File.pipe?(path = "/dev/fd/#{r.fileno}")
+        assert_file.identical?(File.realpath(path), path)
+      end
+    end
+  end
+
+  def test_realpath_taintedness
+    Dir.mktmpdir('rubytest-realpath') {|tmpdir|
+      dir = File.realpath(tmpdir).untaint
+      File.write(File.join(dir, base = "test.file"), '')
+      base.taint
+      dir.taint
+      assert_predicate(File.realpath(base, dir), :tainted?)
+      base.untaint
+      dir.taint
+      assert_predicate(File.realpath(base, dir), :tainted?)
+      base.taint
+      dir.untaint
+      assert_predicate(File.realpath(base, dir), :tainted?)
+      base.untaint
+      dir.untaint
+      assert_not_predicate(File.realpath(base, dir), :tainted?)
+      assert_predicate(Dir.chdir(dir) {File.realpath(base)}, :tainted?)
+    }
+  end
+
   def test_realdirpath
     Dir.mktmpdir('rubytest-realdirpath') {|tmpdir|
       realdir = File.realpath(tmpdir)

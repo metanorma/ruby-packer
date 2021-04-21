@@ -127,6 +127,16 @@ if defined? Zlib
       assert_equal("foobar", Zlib::Inflate.inflate(s))
     end
 
+    def test_expand_buffer;
+      z = Zlib::Deflate.new
+      src = "baz" * 1000
+      z.avail_out = 1
+      GC.stress = true
+      s = z.deflate(src, Zlib::FINISH)
+      GC.stress = false
+      assert_equal(src, Zlib::Inflate.inflate(s))
+    end
+
     def test_total
       z = Zlib::Deflate.new
       1000.times { z << "foo" }
@@ -653,6 +663,18 @@ if defined? Zlib
       }
     end
 
+    def test_ungetc_at_start_of_file
+      s = "".dup
+      w = Zlib::GzipWriter.new(StringIO.new(s))
+      w << "abc"
+      w.close
+      r = Zlib::GzipReader.new(StringIO.new(s))
+
+      r.ungetc ?!
+
+      assert_equal(-1, r.pos, "[ruby-core:81488][Bug #13616]")
+    end
+
     def test_open
       Tempfile.create("test_zlib_gzip_reader_open") {|t|
         t.close
@@ -1173,6 +1195,14 @@ if defined? Zlib
 
       src = %w[1f8b080000000000000].pack("H*")
       assert_raise(Zlib::GzipFile::Error){ Zlib.gunzip(src) }
+    end
+
+    def test_gunzip_no_memory_leak
+      assert_no_memory_leak(%[-rzlib], "#{<<~"{#"}", "#{<<~'};'}")
+      d = Zlib.gzip("data")
+      {#
+        10_000.times {Zlib.gunzip(d)}
+      };
     end
   end
 end

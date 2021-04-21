@@ -1886,6 +1886,119 @@ class TestRefinement < Test::Unit::TestCase
     assert_equal("Parent -> Child", SuperToModule::Child.test, bug)
   end
 
+  def test_include_refinement
+    bug = '[ruby-core:79632] [Bug #13236] cannot include refinement module'
+    r = nil
+    m = Module.new do
+      r = refine(String) {def test;:ok end}
+    end
+    assert_raise_with_message(ArgumentError, /refinement/, bug) do
+      m.module_eval {include r}
+    end
+    assert_raise_with_message(ArgumentError, /refinement/, bug) do
+      m.module_eval {prepend r}
+    end
+  end
+
+  def test_refined_method_alias_warning
+    c = Class.new do
+      def t; :t end
+      def f; :f end
+    end
+    Module.new do
+      refine(c) do
+        alias foo t
+      end
+    end
+    assert_warning('', '[ruby-core:82385] [Bug #13817] refined method is not redefined') do
+      c.class_eval do
+        alias foo f
+      end
+    end
+  end
+
+  class ParentDefiningPrivateMethod
+    private
+    def some_inherited_method
+    end
+  end
+
+  module MixinDefiningPrivateMethod
+    private
+    def some_included_method
+    end
+  end
+
+  class SomeChildClassToRefine < ParentDefiningPrivateMethod
+    include MixinDefiningPrivateMethod
+
+    private
+    def some_method
+    end
+  end
+
+  def test_refine_inherited_method_with_visibility_changes
+    Module.new do
+      refine(SomeChildClassToRefine) do
+        def some_inherited_method; end
+        def some_included_method; end
+        def some_method; end
+      end
+    end
+
+    obj = SomeChildClassToRefine.new
+
+    assert_raise_with_message(NoMethodError, /private/) do
+      obj.some_inherited_method
+    end
+
+    assert_raise_with_message(NoMethodError, /private/) do
+      obj.some_included_method
+    end
+
+    assert_raise_with_message(NoMethodError, /private/) do
+      obj.some_method
+    end
+  end
+
+  def test_refining_module_repeatedly
+    bug14070 = '[ruby-core:83617] [Bug #14070]'
+    assert_in_out_err([], <<-INPUT, ["ok"], [], bug14070)
+      1000.times do
+        Class.new do
+          include Enumerable
+        end
+
+        Module.new do
+          refine Enumerable do
+            def foo
+            end
+          end
+        end
+      end
+      puts "ok"
+    INPUT
+  end
+
+  def test_super_from_refined_module
+    a = EnvUtil.labeled_module("A") do
+      def foo;"[A#{super}]";end
+    end
+    b = EnvUtil.labeled_class("B") do
+      def foo;"[B]";end
+    end
+    c = EnvUtil.labeled_class("C", b) do
+      include a
+      def foo;"[C#{super}]";end
+    end
+    d = EnvUtil.labeled_module("D") do
+      refine(a) do
+        def foo;end
+      end
+    end
+    assert_equal("[C[A[B]]]", c.new.foo, '[ruby-dev:50390] [Bug #14232]')
+  end
+
   private
 
   def eval_using(mod, s)

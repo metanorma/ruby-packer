@@ -1250,6 +1250,65 @@ class TestArray < Test::Unit::TestCase
     assert_equal(@cls[7, 8, 9, 10], a, bug2545)
   end
 
+  def test_shared_array_reject!
+    c = []
+    b = [1, 2, 3, 4]
+    3.times do
+      a = b.dup
+      c << a.dup
+
+      begin
+        a.reject! do |x|
+          case x
+          when 2 then true
+          when 3 then raise StandardError, 'Oops'
+          else false
+          end
+        end
+      rescue StandardError
+      end
+
+      c << a.dup
+    end
+
+    bug90781 = '[ruby-core:90781]'
+    assert_equal [[1, 2, 3, 4],
+                  [1, 3, 4],
+                  [1, 2, 3, 4],
+                  [1, 3, 4],
+                  [1, 2, 3, 4],
+                  [1, 3, 4]], c, bug90781
+  end
+
+  def test_iseq_shared_array_reject!
+    c = []
+    3.times do
+      a = [1, 2, 3, 4]
+      c << a.dup
+
+      begin
+        a.reject! do |x|
+          case x
+          when 2 then true
+          when 3 then raise StandardError, 'Oops'
+          else false
+          end
+        end
+      rescue StandardError
+      end
+
+      c << a.dup
+    end
+
+    bug90781 = '[ruby-core:90781]'
+    assert_equal [[1, 2, 3, 4],
+                  [1, 3, 4],
+                  [1, 2, 3, 4],
+                  [1, 3, 4],
+                  [1, 2, 3, 4],
+                  [1, 3, 4]], c, bug90781
+  end
+
   def test_replace
     a = @cls[ 1, 2, 3]
     a_id = a.__id__
@@ -2102,6 +2161,7 @@ class TestArray < Test::Unit::TestCase
     assert_equal([0], a.insert(1))
     assert_equal([0, 1], a.insert(1, 1))
     assert_raise(ArgumentError) { a.insert }
+    assert_raise(TypeError) { a.insert(Object.new) }
     assert_equal([0, 1, 2], a.insert(-1, 2))
     assert_equal([0, 1, 3, 2], a.insert(-2, 3))
     assert_raise(RuntimeError) { [0].freeze.insert(0)}
@@ -2834,9 +2894,19 @@ class TestArray < Test::Unit::TestCase
     assert_float_equal(large_number+(small_number*10), [large_number/1r, *[small_number]*10].sum)
     assert_float_equal(large_number+(small_number*11), [small_number, large_number/1r, *[small_number]*10].sum)
     assert_float_equal(small_number, [large_number, small_number, -large_number].sum)
+    assert_equal(+Float::INFINITY, [+Float::INFINITY].sum)
+    assert_equal(+Float::INFINITY, [0.0, +Float::INFINITY].sum)
+    assert_equal(+Float::INFINITY, [+Float::INFINITY, 0.0].sum)
+    assert_equal(-Float::INFINITY, [-Float::INFINITY].sum)
+    assert_equal(-Float::INFINITY, [0.0, -Float::INFINITY].sum)
+    assert_equal(-Float::INFINITY, [-Float::INFINITY, 0.0].sum)
+    assert_predicate([-Float::INFINITY, Float::INFINITY].sum, :nan?)
 
     assert_equal("abc", ["a", "b", "c"].sum(""))
     assert_equal([1, [2], 3], [[1], [[2]], [3]].sum([]))
+
+    assert_raise(TypeError) {[0].sum("")}
+    assert_raise(TypeError) {[1].sum("")}
 
     assert_separately(%w[-rmathn], <<-EOS, ignore_stderr: true)
       assert_equal(6, [1r, 2, 3r].sum)

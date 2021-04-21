@@ -2,7 +2,7 @@
 
   ruby.c -
 
-  $Author: usa $
+  $Author$
   created at: Tue Aug 10 12:47:31 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1149,7 +1149,7 @@ proc_options(long argc, char **argv, ruby_cmdline_options_t *opt, int envopt)
 		if (v > 0377)
 		    rb_rs = Qnil;
 		else if (v == 0 && numlen >= 2) {
-		    rb_rs = rb_str_new2("\n\n");
+		    rb_rs = rb_str_new2("");
 		}
 		else {
 		    c = v & 0xff;
@@ -1798,11 +1798,7 @@ load_file_internal(VALUE argp_v)
 	c = rb_io_getbyte(f);
 	if (c == INT2FIX('#')) {
 	    c = rb_io_getbyte(f);
-	    if (c == INT2FIX('!')) {
-		line = rb_io_gets(f);
-		if (NIL_P(line))
-		    return 0;
-
+            if (c == INT2FIX('!') && !NIL_P(line = rb_io_gets(f))) {
 		RSTRING_GETMEM(line, str, len);
 		warn_cr_in_shebang(str, len);
 		if ((p = strstr(str, ruby_engine)) == 0) {
@@ -2069,7 +2065,9 @@ external_str_new_cstr(const char *p)
 {
 #if UTF8_PATH
     VALUE str = rb_utf8_str_new_cstr(p);
-    return str_conv_enc(str, NULL, rb_default_external_encoding());
+    str = str_conv_enc(str, NULL, rb_default_external_encoding());
+    OBJ_TAINT_RAW(str);
+    return str;
 #else
     return rb_external_str_new_cstr(p);
 #endif
@@ -2165,10 +2163,10 @@ ruby_prog_init(void)
     rb_define_hooked_variable("$PROGRAM_NAME", &rb_progname, 0, set_arg0);
 
     rb_define_module_function(rb_mProcess, "argv0", proc_argv0, 0);
-// --------- [Enclose.IO Hack start] ---------
-	VALUE enclose_io_execpath(VALUE process);
-	rb_define_module_function(rb_mProcess, "enclose_io_execpath", enclose_io_execpath, 0);
-// --------- [Enclose.IO Hack end] ---------
+    // --------- [Enclose.IO Hack start] ---------
+    VALUE enclose_io_execpath(VALUE process);
+    rb_define_module_function(rb_mProcess, "enclose_io_execpath", enclose_io_execpath, 0);
+    // --------- [Enclose.IO Hack end] ---------
     rb_define_module_function(rb_mProcess, "setproctitle", proc_setproctitle, 1);
 
     /*
@@ -2284,16 +2282,16 @@ ruby_sysinit(int *argc, char ***argv)
 VALUE enclose_io_execpath(VALUE process)
 {
 #ifdef _WIN32
-	char exec_path[2 * MAX_PATH];
-	int exec_path_len = 2 * MAX_PATH;
+       char exec_path[2 * MAX_PATH];
+       int exec_path_len = 2 * MAX_PATH;
 #else
-	char exec_path[2 * PATH_MAX];
-	int exec_path_len = 2 * PATH_MAX;
+       char exec_path[2 * PATH_MAX];
+       int exec_path_len = 2 * PATH_MAX;
 #endif
-	if (autoupdate_exepath(exec_path, &exec_path_len) == 0) {
-		return rb_sprintf("%s", exec_path);
-	} else {
-		return rb_orig_progname;
-	}
+       if (autoupdate_exepath(exec_path, &exec_path_len) == 0) {
+               return rb_sprintf("%s", exec_path);
+       } else {
+               return rb_orig_progname;
+       }
 }
 // --------- [Enclose.IO Hack end] ---------

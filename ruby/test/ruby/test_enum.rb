@@ -798,6 +798,10 @@ class TestEnumerable < Test::Unit::TestCase
     lambda2 = ->(x, i) { [x.upcase, i] }
     assert_equal([['A',0], ['B',1], ['C',2], ['D',3], ['E',4]],
       @obj.each_with_index.map(&lambda2))
+
+    hash = { a: 'hoge', b: 'fuga' }
+    lambda = -> (k, v) { "#{k}:#{v}" }
+    assert_equal ["a:hoge", "b:fuga"], hash.map(&lambda)
   end
 
   def test_flat_map
@@ -905,6 +909,21 @@ class TestEnumerable < Test::Unit::TestCase
     assert_float_equal(large_number+(small_number*11), [small_number, large_number/1r, *[small_number]*10].each.sum)
     assert_float_equal(small_number, [large_number, small_number, -large_number].each.sum)
 
+    k = Class.new do
+      include Enumerable
+      def initialize(*values)
+        @values = values
+      end
+      def each(&block)
+        @values.each(&block)
+      end
+    end
+    assert_equal(+Float::INFINITY, k.new(0.0, +Float::INFINITY).sum)
+    assert_equal(+Float::INFINITY, k.new(+Float::INFINITY, 0.0).sum)
+    assert_equal(-Float::INFINITY, k.new(0.0, -Float::INFINITY).sum)
+    assert_equal(-Float::INFINITY, k.new(-Float::INFINITY, 0.0).sum)
+    assert_predicate(k.new(-Float::INFINITY, Float::INFINITY).sum, :nan?)
+
     assert_equal("abc", ["a", "b", "c"].each.sum(""))
     assert_equal([1, [2], 3], [[1], [[2]], [3]].each.sum([]))
 
@@ -942,5 +961,6 @@ class TestEnumerable < Test::Unit::TestCase
     assert_equal([[1896, "Athens"], [1900, "Paris"], [1904, "Chicago"], [1908, "Rome"]],
                  olympics.uniq{|k,v| v})
     assert_equal([1, 2, 3, 4, 5, 10], (1..100).uniq{|x| (x**2) % 10 }.first(6))
+    assert_equal([1, [1, 2]], Foo.new.to_enum.uniq)
   end
 end

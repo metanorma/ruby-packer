@@ -1,3 +1,135 @@
+Version 2.0.9
+=============
+
+Security fixes
+--------------
+
+* OpenSSL::X509::Name#<=> could incorrectly return 0 (= equal) for non-equal
+  objects. CVE-2018-16395 is assigned for this issue.
+  https://hackerone.com/reports/387250
+
+Bug fixes
+---------
+
+* Fixed OpenSSL::PKey::*.{new,generate} immediately aborting if the thread is
+  interrupted.
+  [[Bug #14882]](https://bugs.ruby-lang.org/issues/14882)
+  [[GitHub #205]](https://github.com/ruby/openssl/pull/205)
+* Fixed OpenSSL::X509::Name#to_s failing with OpenSSL::X509::NameError if
+  called against an empty instance.
+  [[GitHub #200]](https://github.com/ruby/openssl/issues/200)
+  [[GitHub #211]](https://github.com/ruby/openssl/pull/211)
+
+
+Version 2.0.8
+=============
+
+Bug fixes
+---------
+
+* OpenSSL::Cipher#pkcs5_keyivgen raises an error when a negative iteration
+  count is given.
+  [[GitHub #184]](https://github.com/ruby/openssl/pull/184)
+* Fixed build with LibreSSL 2.7.
+  [[GitHub #192]](https://github.com/ruby/openssl/issues/192)
+  [[GitHub #193]](https://github.com/ruby/openssl/pull/193)
+
+
+Version 2.0.7
+=============
+
+Bug fixes
+---------
+
+* OpenSSL::Cipher#auth_data= could segfault if called against a non-AEAD cipher.
+  [[Bug #14024]](https://bugs.ruby-lang.org/issues/14024)
+* OpenSSL::X509::Certificate#public_key= (and similar methods) could segfault
+  when an instance of OpenSSL::PKey::PKey with no public key components is
+  passed.
+  [[Bug #14087]](https://bugs.ruby-lang.org/issues/14087)
+  [[GitHub #168]](https://github.com/ruby/openssl/pull/168)
+
+
+Version 2.0.6
+=============
+
+Bug fixes
+---------
+
+* The session_remove_cb set to an OpenSSL::SSL::SSLContext is no longer called
+  during GC.
+* A possible deadlock in OpenSSL::SSL::SSLSocket#sysread is fixed.
+  [[GitHub #139]](https://github.com/ruby/openssl/pull/139)
+* OpenSSL::BN#hash could return an unnormalized fixnum value on Windows.
+  [[Bug #13877]](https://bugs.ruby-lang.org/issues/13877)
+* OpenSSL::SSL::SSLSocket#sysread and #sysread_nonblock set the length of the
+  destination buffer String to 0 on error.
+  [[GitHub #153]](https://github.com/ruby/openssl/pull/153)
+* Possible deadlock is fixed. This happened only when built with older versions
+  of OpenSSL (before 1.1.0) or LibreSSL.
+  [[GitHub #155]](https://github.com/ruby/openssl/pull/155)
+
+
+Version 2.0.5
+=============
+
+Bug fixes
+---------
+
+* Reading a PEM/DER-encoded private key or certificate from an IO object did
+  not work properly on mswin platforms.
+  [[ruby/openssl#128]](https://github.com/ruby/openssl/issues/128)
+* Broken length check in the PEM passphrase callback is fixed.
+* It failed to compile when OpenSSL is configured without TLS 1.0 support.
+
+
+Version 2.0.4
+=============
+
+Bug fixes
+---------
+
+* It now compiles with LibreSSL without renaming on Windows (mswin).
+* A workaround for the error queue leak of X509_load_cert_crl_file() that
+  causes random errors is added.
+  [[Bug #11033]](https://bugs.ruby-lang.org/issues/11033)
+
+
+Version 2.0.3
+=============
+
+Bug fixes
+---------
+
+* OpenSSL::ASN1::Constructive#each which was broken by 2.0.0 is fixed.
+  [[ruby/openssl#96]](https://github.com/ruby/openssl/pull/96)
+* Fixed build with static OpenSSL libraries on Windows.
+  [[Bug #13080]](https://bugs.ruby-lang.org/issues/13080)
+* OpenSSL::X509::Name#eql? which was broken by 2.0.0 is fixed.
+
+
+Version 2.0.2
+=============
+
+Bug fixes
+---------
+
+* Fix build with early 0.9.8 series which did not have SSL_CTX_clear_options().
+  [ruby-core:78693]
+
+
+Version 2.0.1
+=============
+
+Bug fixes
+---------
+
+* A GC issue around OpenSSL::BN is fixed.
+  [[ruby/openssl#87]](https://github.com/ruby/openssl/issues/87)
+* OpenSSL::ASN1 now parses BER encoding of GeneralizedTime without seconds.
+  [[ruby/openssl#88]](https://github.com/ruby/openssl/pull/88)
+
+
 Version 2.0.0
 =============
 
@@ -23,7 +155,8 @@ Supported platforms
 Notable changes
 ---------------
 
-* Add support for OpenSSL 1.1.0. [[Feature #12324]](https://bugs.ruby-lang.org/issues/12324)
+* Add support for OpenSSL 1.1.0.
+  [[Feature #12324]](https://bugs.ruby-lang.org/issues/12324)
 * Add support for LibreSSL
 
 * OpenSSL::Cipher
@@ -89,7 +222,7 @@ Notable changes
   - A new option 'verify_hostname' is added to OpenSSL::SSL::SSLContext. When it
     is enabled, and the SNI hostname is also set, the hostname verification on
     the server certificate is automatically performed. It is now enabled by
-    OpenSSL::SSL::Context#set_params.
+    OpenSSL::SSL::SSLContext#set_params.
     [[GH ruby/openssl#60]](https://github.com/ruby/openssl/pull/60)
 
 Removals

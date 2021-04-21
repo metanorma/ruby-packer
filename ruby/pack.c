@@ -2,7 +2,7 @@
 
   pack.c -
 
-  $Author: naruse $
+  $Author$
   created at: Thu Feb 10 15:17:05 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -761,6 +761,7 @@ pack_pack(int argc, VALUE *argv, VALUE ary)
 	    StringValue(from);
 	    ptr = RSTRING_PTR(from);
 	    plen = RSTRING_LEN(from);
+	    OBJ_INFECT(res, from);
 
 	    if (len == 0 && type == 'm') {
 		encodes(res, ptr, plen, type, 0);
@@ -788,6 +789,7 @@ pack_pack(int argc, VALUE *argv, VALUE ary)
 
 	  case 'M':		/* quoted-printable encoded string */
 	    from = rb_obj_as_string(NEXTFROM);
+	    OBJ_INFECT(res, from);
 	    if (len <= 1)
 		len = 72;
 	    qpencode(res, from, len);
@@ -813,6 +815,7 @@ pack_pack(int argc, VALUE *argv, VALUE ary)
 		}
 		else {
 		    t = StringValuePtr(from);
+		    OBJ_INFECT(res, from);
 		    rb_obj_taint(from);
 		}
 		if (!associates) {
@@ -1138,7 +1141,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 	else if (ISDIGIT(*p)) {
 	    errno = 0;
 	    len = STRTOUL(p, (char**)&p, 10);
-	    if (errno) {
+	    if (len < 0 || errno) {
 		rb_raise(rb_eRangeError, "pack length too big");
 	    }
 	}
@@ -1195,6 +1198,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 		    len = (send - s) * 8;
 		bits = 0;
 		bitstr = rb_usascii_str_new(0, len);
+		OBJ_INFECT(bitstr, str);
 		t = RSTRING_PTR(bitstr);
 		for (i=0; i<len; i++) {
 		    if (i & 7) bits >>= 1;
@@ -1216,6 +1220,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 		    len = (send - s) * 8;
 		bits = 0;
 		bitstr = rb_usascii_str_new(0, len);
+		OBJ_INFECT(bitstr, str);
 		t = RSTRING_PTR(bitstr);
 		for (i=0; i<len; i++) {
 		    if (i & 7) bits <<= 1;
@@ -1237,6 +1242,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 		    len = (send - s) * 2;
 		bits = 0;
 		bitstr = rb_usascii_str_new(0, len);
+		OBJ_INFECT(bitstr, str);
 		t = RSTRING_PTR(bitstr);
 		for (i=0; i<len; i++) {
 		    if (i & 1)
@@ -1260,6 +1266,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 		    len = (send - s) * 2;
 		bits = 0;
 		bitstr = rb_usascii_str_new(0, len);
+		OBJ_INFECT(bitstr, str);
 		t = RSTRING_PTR(bitstr);
 		for (i=0; i<len; i++) {
 		    if (i & 1)
@@ -1609,6 +1616,7 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 	    {
 		VALUE buf = infected_str_new(0, send - s, str);
 		char *ptr = RSTRING_PTR(buf), *ss = s;
+		int csum = 0;
 		int c1, c2;
 
 		while (s < send) {
@@ -1620,18 +1628,19 @@ pack_unpack_internal(VALUE str, VALUE fmt, int mode)
 			    if ((c1 = hex2num(*s)) == -1) break;
 			    if (++s == send) break;
 			    if ((c2 = hex2num(*s)) == -1) break;
-			    *ptr++ = castchar(c1 << 4 | c2);
+			    csum |= *ptr++ = castchar(c1 << 4 | c2);
 			}
 		    }
 		    else {
-			*ptr++ = *s;
+			csum |= *ptr++ = *s;
 		    }
 		    s++;
 		    ss = s;
 		}
 		rb_str_set_len(buf, ptr - RSTRING_PTR(buf));
 		rb_str_buf_cat(buf, ss, send-ss);
-		ENCODING_CODERANGE_SET(buf, rb_ascii8bit_encindex(), ENC_CODERANGE_VALID);
+		csum = ISASCII(csum) ? ENC_CODERANGE_7BIT : ENC_CODERANGE_VALID;
+		ENCODING_CODERANGE_SET(buf, rb_ascii8bit_encindex(), csum);
 		UNPACK_PUSH(buf);
 	    }
 	    break;

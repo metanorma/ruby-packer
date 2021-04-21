@@ -2,7 +2,7 @@
 
   time.c -
 
-  $Author: naruse $
+  $Author$
   created at: Tue Dec 28 14:31:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -643,12 +643,18 @@ static struct vtm *localtimew(wideval_t timew, struct vtm *result);
 static int leap_year_p(long y);
 #define leap_year_v_p(y) leap_year_p(NUM2LONG(mod((y), INT2FIX(400))))
 
+int ruby_tz_update;
+
 static struct tm *
 rb_localtime_r(const time_t *t, struct tm *result)
 {
 #if defined __APPLE__ && defined __LP64__
     if (*t != (time_t)(int)*t) return NULL;
 #endif
+    if (!ruby_tz_update) {
+	ruby_tz_update = 1;
+	tzset();
+    }
 #ifdef HAVE_GMTIME_R
     result = localtime_r(t, result);
 #else
@@ -674,7 +680,7 @@ rb_localtime_r(const time_t *t, struct tm *result)
 #endif
     return result;
 }
-#define LOCALTIME(tm, result) (tzset(),rb_localtime_r((tm), &(result)))
+#define LOCALTIME(tm, result) rb_localtime_r((tm), &(result))
 
 #ifndef HAVE_STRUCT_TM_TM_GMTOFF
 static struct tm *
@@ -2566,6 +2572,29 @@ time_arg(int argc, VALUE *argv, struct vtm *vtm)
     }
     else {
 	vtm->mday = obj2ubits(v[2], 5);
+    }
+
+    /* normalize month-mday */
+    switch (vtm->mon) {
+      case 2:
+        {
+            /* this drops higher bits but it's not a problem to calc leap year */
+            unsigned int mday2 = leap_year_v_p(vtm->year) ? 29 : 28;
+            if (vtm->mday > mday2) {
+                vtm->mday -= mday2;
+                vtm->mon++;
+            }
+        }
+        break;
+      case 4:
+      case 6:
+      case 9:
+      case 11:
+        if (vtm->mday == 31) {
+            vtm->mon++;
+            vtm->mday = 1;
+        }
+        break;
     }
 
     vtm->hour = NIL_P(v[3])?0:obj2ubits(v[3], 5);

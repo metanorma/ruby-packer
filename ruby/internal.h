@@ -330,8 +330,6 @@ ntz_intptr(uintptr_t x)
 VALUE rb_int128t2big(int128_t n);
 #endif
 
-#define ST2FIX(h) LONG2FIX((long)(h))
-
 
 /* arguments must be Fixnum */
 static inline VALUE
@@ -776,6 +774,8 @@ struct vm_svar {
 
 /* THROW_DATA */
 
+#define THROW_DATA_CONSUMED IMEMO_FL_USER0
+
 struct vm_throw_data {
     VALUE flags;
     VALUE reserved;
@@ -784,19 +784,34 @@ struct vm_throw_data {
     VALUE throw_state;
 };
 
-#define THROW_DATA_P(err) RB_TYPE_P((err), T_IMEMO)
+#define THROW_DATA_P(err) RB_TYPE_P(((VALUE)err), T_IMEMO)
 
 /* IFUNC */
+
+struct vm_ifunc_argc {
+#if SIZEOF_INT * 2 > SIZEOF_VALUE
+    int min: (SIZEOF_VALUE * CHAR_BIT) / 2;
+    int max: (SIZEOF_VALUE * CHAR_BIT) / 2;
+#else
+    int min, max;
+#endif
+};
 
 struct vm_ifunc {
     VALUE flags;
     VALUE reserved;
     VALUE (*func)(ANYARGS);
     const void *data;
-    ID id;
+    struct vm_ifunc_argc argc;
 };
 
 #define IFUNC_NEW(a, b, c) ((struct vm_ifunc *)rb_imemo_new(imemo_ifunc, (VALUE)(a), (VALUE)(b), (VALUE)(c), 0))
+struct vm_ifunc *rb_vm_ifunc_new(VALUE (*func)(ANYARGS), const void *data, int min_argc, int max_argc);
+static inline struct vm_ifunc *
+rb_vm_ifunc_proc_new(VALUE (*func)(ANYARGS), const void *data)
+{
+    return rb_vm_ifunc_new(func, data, 0, UNLIMITED_ARGUMENTS);
+}
 
 /* MEMO */
 
@@ -950,7 +965,7 @@ VALUE rb_invcmp(VALUE, VALUE);
 struct rb_block;
 int rb_dvar_defined(ID, const struct rb_block *);
 int rb_local_defined(ID, const struct rb_block *);
-CONSTFUNC(const char * rb_insns_name(int i));
+const char * rb_insns_name(int i);
 VALUE rb_insns_name_array(void);
 
 /* complex.c */
@@ -973,7 +988,7 @@ void Init_ext(void);
 
 /* encoding.c */
 ID rb_id_encoding(void);
-CONSTFUNC(void rb_gc_mark_encodings(void));
+void rb_gc_mark_encodings(void);
 rb_encoding *rb_enc_get_from_index(int index);
 rb_encoding *rb_enc_check_str(VALUE str1, VALUE str2);
 int rb_encdb_replicate(const char *alias, const char *orig);
@@ -1000,9 +1015,17 @@ VALUE rb_check_backtrace(VALUE);
 NORETURN(void rb_async_bug_errno(const char *,int));
 const char *rb_builtin_type_name(int t);
 const char *rb_builtin_class_name(VALUE x);
+PRINTF_ARGS(void rb_sys_warn(const char *fmt, ...), 1, 2);
+PRINTF_ARGS(void rb_syserr_warn(int err, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_enc_warn(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_sys_enc_warn(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_syserr_enc_warn(int err, rb_encoding *enc, const char *fmt, ...), 3, 4);
+PRINTF_ARGS(void rb_sys_warning(const char *fmt, ...), 1, 2);
+PRINTF_ARGS(void rb_syserr_warning(int err, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_enc_warning(rb_encoding *enc, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_sys_enc_warning(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_syserr_enc_warning(int err, rb_encoding *enc, const char *fmt, ...), 3, 4);
+
 VALUE rb_name_err_new(VALUE mesg, VALUE recv, VALUE method);
 #define rb_name_err_raise_str(mesg, recv, name) \
     rb_exc_raise(rb_name_err_new(mesg, recv, name))
@@ -1010,6 +1033,8 @@ VALUE rb_name_err_new(VALUE mesg, VALUE recv, VALUE method);
     rb_name_err_raise_str(rb_fstring_cstr(mesg), (recv), (name))
 NORETURN(void ruby_only_for_internal_use(const char *));
 #define ONLY_FOR_INTERNAL_USE(func) ruby_only_for_internal_use(func)
+VALUE rb_warning_warn(VALUE mod, VALUE str);
+VALUE rb_warning_string(const char *fmt, ...);
 
 /* eval.c */
 VALUE rb_refinement_module_get_refined_class(VALUE module);
@@ -1026,6 +1051,7 @@ void rb_mark_end_proc(void);
 VALUE rb_home_dir_of(VALUE user, VALUE result);
 VALUE rb_default_home_dir(VALUE result);
 VALUE rb_realpath_internal(VALUE basedir, VALUE path, int strict);
+VALUE rb_check_realpath(VALUE basedir, VALUE path);
 void rb_file_const(const char*, VALUE);
 int rb_file_load_ok(const char *);
 VALUE rb_file_expand_path_fast(VALUE, VALUE);
@@ -1333,8 +1359,9 @@ ID rb_id_attrget(ID id);
 VALUE rb_proc_location(VALUE self);
 st_index_t rb_hash_proc(st_index_t hash, VALUE proc);
 int rb_block_arity(void);
+int rb_block_min_max_arity(int *max);
 VALUE rb_func_proc_new(rb_block_call_func_t func, VALUE val);
-VALUE rb_func_lambda_new(rb_block_call_func_t func, VALUE val);
+VALUE rb_func_lambda_new(rb_block_call_func_t func, VALUE val, int min_argc, int max_argc);
 
 /* process.c */
 #define RB_MAX_GROUPS (65536)
@@ -1424,7 +1451,6 @@ VALUE rb_strftime(const char *format, size_t format_len, rb_encoding *enc,
 #endif
 
 /* string.c */
-void Init_frozen_strings(void);
 VALUE rb_fstring(VALUE);
 VALUE rb_fstring_new(const char *ptr, long len);
 #define rb_fstring_lit(str) rb_fstring_new((str), rb_strlen_lit(str))
@@ -1594,6 +1620,9 @@ VALUE rb_check_funcall_default(VALUE, ID, int, const VALUE *, VALUE);
 VALUE rb_catch_protect(VALUE t, rb_block_call_func *func, VALUE data, int *stateptr);
 VALUE rb_yield_1(VALUE val);
 VALUE rb_yield_lambda(VALUE values);
+VALUE rb_lambda_call(VALUE obj, ID mid, int argc, const VALUE *argv,
+		     rb_block_call_func_t bl_proc, int min_argc, int max_argc,
+		     VALUE data2);
 
 /* vm_insnhelper.c */
 VALUE rb_equal_opt(VALUE obj1, VALUE obj2);
@@ -1615,7 +1644,7 @@ void rb_backtrace_print_as_bugreport(void);
 int rb_backtrace_p(VALUE obj);
 VALUE rb_backtrace_to_str_ary(VALUE obj);
 VALUE rb_backtrace_to_location_ary(VALUE obj);
-void rb_backtrace_print_to(VALUE output);
+void rb_backtrace_each(VALUE (*iter)(VALUE recv, VALUE str), VALUE output);
 VALUE rb_vm_backtrace_object(void);
 
 RUBY_SYMBOL_EXPORT_BEGIN

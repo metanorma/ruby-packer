@@ -2,7 +2,7 @@
 
   string.c -
 
-  $Author: naruse $
+  $Author$
   created at: Mon Aug  9 17:12:58 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2451,6 +2451,7 @@ str_substr(VALUE str, long beg, long len, int empty)
 	str2 = str_new_shared(rb_obj_class(str2), str2);
 	RSTRING(str2)->as.heap.ptr += ofs;
 	RSTRING(str2)->as.heap.len = len;
+	ENC_CODERANGE_CLEAR(str2);
     }
     else {
 	if (!len && !empty) return Qnil;
@@ -3969,6 +3970,7 @@ str_succ(VALUE str)
             }
             carry_pos = s - sbeg;
 	}
+	ENC_CODERANGE_SET(str, ENC_CODERANGE_UNKNOWN);
     }
     RESIZE_CAPA(str, slen + carry_len);
     sbeg = RSTRING_PTR(str);
@@ -6102,7 +6104,7 @@ rb_str_upcase_bang(int argc, VALUE *argv, VALUE str)
     str_modify_keep_cr(str);
     enc = STR_ENC_GET(str);
     rb_str_check_dummy_enc(enc);
-    if ((flags&ONIGENC_CASE_ASCII_ONLY) && (enc==rb_utf8_encoding() || rb_enc_mbmaxlen(enc)==1)
+    if (((flags&ONIGENC_CASE_ASCII_ONLY) && (enc==rb_utf8_encoding() || rb_enc_mbmaxlen(enc)==1))
 	|| (!(flags&ONIGENC_CASE_FOLD_TURKISH_AZERI) && ENC_CODERANGE(str)==ENC_CODERANGE_7BIT)) {
         char *s = RSTRING_PTR(str), *send = RSTRING_END(str);
 
@@ -6168,7 +6170,7 @@ rb_str_downcase_bang(int argc, VALUE *argv, VALUE str)
     str_modify_keep_cr(str);
     enc = STR_ENC_GET(str);
     rb_str_check_dummy_enc(enc);
-    if ((flags&ONIGENC_CASE_ASCII_ONLY) && (enc==rb_utf8_encoding() || rb_enc_mbmaxlen(enc)==1)
+    if (((flags&ONIGENC_CASE_ASCII_ONLY) && (enc==rb_utf8_encoding() || rb_enc_mbmaxlen(enc)==1))
 	|| (!(flags&ONIGENC_CASE_FOLD_TURKISH_AZERI) && ENC_CODERANGE(str)==ENC_CODERANGE_7BIT)) {
         char *s = RSTRING_PTR(str), *send = RSTRING_END(str);
 
@@ -6520,7 +6522,7 @@ tr_trans(VALUE str, VALUE src, VALUE repl, int sflag)
 	}
     }
 
-    if (cr == ENC_CODERANGE_VALID)
+    if (cr == ENC_CODERANGE_VALID && rb_enc_asciicompat(e1))
 	cr = ENC_CODERANGE_7BIT;
     str_modify_keep_cr(str);
     s = RSTRING_PTR(str); send = RSTRING_END(str);
@@ -7188,7 +7190,7 @@ static const char isspacetable[256] = {
 
 /*
  *  call-seq:
- *     str.split(pattern=nil, [limit])   -> anArray
+ *     str.split(pattern=nil, [limit])   -> an_array
  *
  *  Divides <i>str</i> into substrings based on a delimiter, returning an array
  *  of these substrings.
@@ -7208,9 +7210,11 @@ static const char isspacetable[256] = {
  *  split on whitespace as if ' ' were specified.
  *
  *  If the <i>limit</i> parameter is omitted, trailing null fields are
- *  suppressed. If <i>limit</i> is a positive number, at most that number of
- *  fields will be returned (if <i>limit</i> is <code>1</code>, the entire
- *  string is returned as the only entry in an array). If negative, there is no
+ *  suppressed. If <i>limit</i> is a positive number, at most that number
+ *  of split substrings will be returned (captured groups will be returned
+ *  as well, but are not counted towards the limit).
+ *  If <i>limit</i> is <code>1</code>, the entire
+ *  string is returned as the only entry in an array. If negative, there is no
  *  limit to the number of fields returned, and trailing null fields are not
  *  suppressed.
  *
@@ -7229,6 +7233,8 @@ static const char isspacetable[256] = {
  *     "1,2,,3,4,,".split(',')         #=> ["1", "2", "", "3", "4"]
  *     "1,2,,3,4,,".split(',', 4)      #=> ["1", "2", "", "3,4,,"]
  *     "1,2,,3,4,,".split(',', -4)     #=> ["1", "2", "", "3", "4", "", ""]
+ *
+ *     "1:2:3".split(/(:)()()/, 2)     #=> ["1", ":", "", "", "2:3"]
  *
  *     "".split(',', -1)               #=> []
  */
@@ -7250,7 +7256,7 @@ rb_str_split_m(int argc, VALUE *argv, VALUE str)
 	else if (lim == 1) {
 	    if (RSTRING_LEN(str) == 0)
 		return rb_ary_new2(0);
-	    return rb_ary_new3(1, str);
+	    return rb_ary_new3(1, rb_str_dup(str));
 	}
 	i = 1;
     }
@@ -8923,7 +8929,7 @@ rb_str_partition(VALUE str, VALUE sep)
 	pos = rb_reg_search(sep, str, 0, 0);
 	if (pos < 0) {
 	  failed:
-	    return rb_ary_new3(3, str, str_new_empty(str), str_new_empty(str));
+	    return rb_ary_new3(3, rb_str_dup(str), str_new_empty(str), str_new_empty(str));
 	}
 	sep = rb_str_subpat(str, sep, INT2FIX(0));
 	if (pos == 0 && RSTRING_LEN(sep) == 0) goto failed;
@@ -8976,7 +8982,7 @@ rb_str_rpartition(VALUE str, VALUE sep)
 	pos = rb_str_rindex(str, sep, pos);
     }
     if (pos < 0) {
-	return rb_ary_new3(3, str_new_empty(str), str_new_empty(str), str);
+       return rb_ary_new3(3, str_new_empty(str), str_new_empty(str), rb_str_dup(str));
     }
     if (regex) {
 	sep = rb_reg_nth_match(0, rb_backref_get());
@@ -9217,6 +9223,8 @@ str_compat_and_valid(VALUE str, rb_encoding *enc)
     return str;
 }
 
+static VALUE enc_str_scrub(rb_encoding *enc, VALUE str, VALUE repl, int cr);
+
 /**
  * @param str the string to be scrubbed
  * @param repl the replacement character
@@ -9225,13 +9233,25 @@ str_compat_and_valid(VALUE str, rb_encoding *enc)
 VALUE
 rb_str_scrub(VALUE str, VALUE repl)
 {
-    return rb_enc_str_scrub(STR_ENC_GET(str), str, repl);
+    rb_encoding *enc = STR_ENC_GET(str);
+    return enc_str_scrub(enc, str, repl, ENC_CODERANGE(str));
 }
 
 VALUE
 rb_enc_str_scrub(rb_encoding *enc, VALUE str, VALUE repl)
 {
-    int cr = ENC_CODERANGE(str);
+    int cr = ENC_CODERANGE_UNKNOWN;
+    if (enc == STR_ENC_GET(str)) {
+	/* cached coderange makes sense only when enc equals the
+	 * actual encoding of str */
+	cr = ENC_CODERANGE(str);
+    }
+    return enc_str_scrub(enc, str, repl, cr);
+}
+
+static VALUE
+enc_str_scrub(rb_encoding *enc, VALUE str, VALUE repl, int cr)
+{
     int encidx;
     VALUE buf = Qnil;
     const char *rep;
@@ -9668,6 +9688,7 @@ sym_inspect(VALUE sym)
  *  Returns the name or string corresponding to <i>sym</i>.
  *
  *     :fred.id2name   #=> "fred"
+ *     :ginger.to_s    #=> "ginger"
  */
 
 

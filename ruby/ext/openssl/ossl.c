@@ -129,13 +129,6 @@ ossl_bin2hex(unsigned char *in, char *out, size_t inlen)
 /*
  * our default PEM callback
  */
-
-/*
- * OpenSSL requires passwords for PEM-encoded files to be at least four
- * characters long. See crypto/pem/pem_lib.c (as of 1.0.2h)
- */
-#define OSSL_MIN_PWD_LEN 4
-
 VALUE
 ossl_pem_passwd_value(VALUE pass)
 {
@@ -144,8 +137,6 @@ ossl_pem_passwd_value(VALUE pass)
 
     StringValue(pass);
 
-    if (RSTRING_LEN(pass) < OSSL_MIN_PWD_LEN)
-	ossl_raise(eOSSLError, "password must be at least %d bytes", OSSL_MIN_PWD_LEN);
     /* PEM_BUFSIZE is currently used as the second argument of pem_password_cb,
      * that is +max_len+ of ossl_pem_passwd_cb() */
     if (RSTRING_LEN(pass) > PEM_BUFSIZE)
@@ -157,11 +148,10 @@ ossl_pem_passwd_value(VALUE pass)
 static VALUE
 ossl_pem_passwd_cb0(VALUE flag)
 {
-    VALUE pass;
-
-    pass = rb_yield(flag);
-    SafeStringValue(pass);
-
+    VALUE pass = rb_yield(flag);
+    if (NIL_P(pass))
+	return Qnil;
+    StringValue(pass);
     return pass;
 }
 
@@ -178,7 +168,7 @@ ossl_pem_passwd_cb(char *buf, int max_len, int flag, void *pwd_)
 	 * bytes silently if the input is over 1024 bytes */
 	if (RB_TYPE_P(pass, T_STRING)) {
 	    len = RSTRING_LEN(pass);
-	    if (len >= OSSL_MIN_PWD_LEN && len <= max_len) {
+	    if (len <= max_len) {
 		memcpy(buf, RSTRING_PTR(pass), len);
 		return (int)len;
 	    }
@@ -204,11 +194,9 @@ ossl_pem_passwd_cb(char *buf, int max_len, int flag, void *pwd_)
 	    rb_set_errinfo(Qnil);
 	    return -1;
 	}
+	if (NIL_P(pass))
+	    return -1;
 	len = RSTRING_LEN(pass);
-	if (len < OSSL_MIN_PWD_LEN) {
-	    rb_warning("password must be at least %d bytes", OSSL_MIN_PWD_LEN);
-	    continue;
-	}
 	if (len > max_len) {
 	    rb_warning("password must not be longer than %d bytes", max_len);
 	    continue;
@@ -426,44 +414,123 @@ ossl_fips_mode_set(VALUE self, VALUE enabled)
 #endif
 }
 
+#if defined(OSSL_DEBUG)
+#if !defined(LIBRESSL_VERSION_NUMBER) && \
+    (OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(OPENSSL_NO_CRYPTO_MDEBUG) || \
+     defined(CRYPTO_malloc_debug_init))
+/*
+ * call-seq:
+ *   OpenSSL.mem_check_start -> nil
+ *
+ * Calls CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON). Starts tracking memory
+ * allocations. See also OpenSSL.print_mem_leaks.
+ *
+ * This is available only when built with a capable OpenSSL and --enable-debug
+ * configure option.
+ */
+static VALUE
+mem_check_start(VALUE self)
+{
+	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+	return Qnil;
+}
+
+/*
+ * call-seq:
+ *   OpenSSL.print_mem_leaks -> true | false
+ *
+ * For debugging the Ruby/OpenSSL library. Calls CRYPTO_mem_leaks_fp(stderr).
+ * Prints detected memory leaks to standard error. This cleans the global state
+ * up thus you cannot use any methods of the library after calling this.
+ *
+ * Returns true if leaks detected, false otherwise.
+ *
+ * This is available only when built with a capable OpenSSL and --enable-debug
+ * configure option.
+ *
+ * === Example
+ *   OpenSSL.mem_check_start
+ *   NOT_GCED = OpenSSL::PKey::RSA.new(256)
+ *
+ *   END {
+ *     GC.start
+ *     OpenSSL.print_mem_leaks # will print the leakage
+ *   }
+ */
+static VALUE
+print_mem_leaks(VALUE self)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+    int ret;
+#endif
+
+    BN_CTX_free(ossl_bn_ctx);
+    ossl_bn_ctx = NULL;
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+    ret = CRYPTO_mem_leaks_fp(stderr);
+    if (ret < 0)
+	ossl_raise(eOSSLError, "CRYPTO_mem_leaks_fp");
+    return ret ? Qfalse : Qtrue;
+#else
+    CRYPTO_mem_leaks_fp(stderr);
+    return Qnil;
+#endif
+}
+#endif
+#endif
+
 #if !defined(HAVE_OPENSSL_110_THREADING_API)
 /**
  * Stores locks needed for OpenSSL thread safety
  */
-static rb_nativethread_lock_t *ossl_locks;
-
-static void
-ossl_lock_unlock(int mode, rb_nativethread_lock_t *lock)
-{
-    if (mode & CRYPTO_LOCK) {
-	rb_nativethread_lock_lock(lock);
-    } else {
-	rb_nativethread_lock_unlock(lock);
-    }
-}
-
-static void
-ossl_lock_callback(int mode, int type, const char *file, int line)
-{
-    ossl_lock_unlock(mode, &ossl_locks[type]);
-}
-
 struct CRYPTO_dynlock_value {
     rb_nativethread_lock_t lock;
+    rb_nativethread_id_t owner;
+    size_t count;
 };
+
+static void
+ossl_lock_init(struct CRYPTO_dynlock_value *l)
+{
+    rb_nativethread_lock_initialize(&l->lock);
+    l->count = 0;
+}
+
+static void
+ossl_lock_unlock(int mode, struct CRYPTO_dynlock_value *l)
+{
+    if (mode & CRYPTO_LOCK) {
+	/* TODO: rb_nativethread_id_t is not necessarily compared with ==. */
+	rb_nativethread_id_t tid = rb_nativethread_self();
+	if (l->count && l->owner == tid) {
+	    l->count++;
+	    return;
+	}
+	rb_nativethread_lock_lock(&l->lock);
+	l->owner = tid;
+	l->count = 1;
+    } else {
+	if (!--l->count)
+	    rb_nativethread_lock_unlock(&l->lock);
+    }
+}
 
 static struct CRYPTO_dynlock_value *
 ossl_dyn_create_callback(const char *file, int line)
 {
-    struct CRYPTO_dynlock_value *dynlock = (struct CRYPTO_dynlock_value *)OPENSSL_malloc((int)sizeof(struct CRYPTO_dynlock_value));
-    rb_nativethread_lock_initialize(&dynlock->lock);
+    /* Do not use xmalloc() here, since it may raise NoMemoryError */
+    struct CRYPTO_dynlock_value *dynlock =
+	OPENSSL_malloc(sizeof(struct CRYPTO_dynlock_value));
+    if (dynlock)
+	ossl_lock_init(dynlock);
     return dynlock;
 }
 
 static void
 ossl_dyn_lock_callback(int mode, struct CRYPTO_dynlock_value *l, const char *file, int line)
 {
-    ossl_lock_unlock(mode, &l->lock);
+    ossl_lock_unlock(mode, l);
 }
 
 static void
@@ -487,21 +554,22 @@ static unsigned long ossl_thread_id(void)
 }
 #endif
 
+static struct CRYPTO_dynlock_value *ossl_locks;
+
+static void
+ossl_lock_callback(int mode, int type, const char *file, int line)
+{
+    ossl_lock_unlock(mode, &ossl_locks[type]);
+}
+
 static void Init_ossl_locks(void)
 {
     int i;
     int num_locks = CRYPTO_num_locks();
 
-    if ((unsigned)num_locks >= INT_MAX / (int)sizeof(VALUE)) {
-	rb_raise(rb_eRuntimeError, "CRYPTO_num_locks() is too big: %d", num_locks);
-    }
-    ossl_locks = (rb_nativethread_lock_t *) OPENSSL_malloc(num_locks * (int)sizeof(rb_nativethread_lock_t));
-    if (!ossl_locks) {
-	rb_raise(rb_eNoMemError, "CRYPTO_num_locks() is too big: %d", num_locks);
-    }
-    for (i = 0; i < num_locks; i++) {
-	rb_nativethread_lock_initialize(&ossl_locks[i]);
-    }
+    ossl_locks = ALLOC_N(struct CRYPTO_dynlock_value, num_locks);
+    for (i = 0; i < num_locks; i++)
+	ossl_lock_init(&ossl_locks[i]);
 
 #ifdef HAVE_CRYPTO_THREADID_PTR
     CRYPTO_THREADID_set_callback(ossl_threadid_func);
@@ -1010,6 +1078,7 @@ static void Init_ossl_locks(void)
 void
 Init_openssl(void)
 {
+#undef rb_intern
     /*
      * Init timezone info
      */
@@ -1126,15 +1195,40 @@ Init_openssl(void)
     Init_ossl_ocsp();
     Init_ossl_engine();
     Init_ossl_asn1();
-}
 
 #if defined(OSSL_DEBUG)
-/*
- * Check if all symbols are OK with 'make LDSHARED=gcc all'
- */
-int
-main(int argc, char *argv[])
-{
-    return 0;
+    /*
+     * For debugging Ruby/OpenSSL. Enable only when built with --enable-debug
+     */
+#if !defined(LIBRESSL_VERSION_NUMBER) && \
+    (OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(OPENSSL_NO_CRYPTO_MDEBUG) || \
+     defined(CRYPTO_malloc_debug_init))
+    rb_define_module_function(mOSSL, "mem_check_start", mem_check_start, 0);
+    rb_define_module_function(mOSSL, "print_mem_leaks", print_mem_leaks, 0);
+
+#if defined(CRYPTO_malloc_debug_init) /* <= 1.0.2 */
+    CRYPTO_malloc_debug_init();
+#endif
+
+#if defined(V_CRYPTO_MDEBUG_ALL) /* <= 1.0.2 */
+    CRYPTO_set_mem_debug_options(V_CRYPTO_MDEBUG_ALL);
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000 /* <= 1.0.2 */
+    {
+	int i;
+	/*
+	 * See crypto/ex_data.c; call def_get_class() immediately to avoid
+	 * allocations. 15 is the maximum number that is used as the class index
+	 * in OpenSSL 1.0.2.
+	 */
+	for (i = 0; i <= 15; i++) {
+	    if (CRYPTO_get_ex_new_index(i, 0, (void *)"ossl-mdebug-dummy", 0, 0, 0) < 0)
+		rb_raise(rb_eRuntimeError, "CRYPTO_get_ex_new_index for "
+			 "class index %d failed", i);
+	}
+    }
+#endif
+#endif
+#endif
 }
-#endif /* OSSL_DEBUG */

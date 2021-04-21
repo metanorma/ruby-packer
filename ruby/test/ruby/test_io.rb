@@ -228,6 +228,19 @@ class TestIO < Test::Unit::TestCase
       assert_nil r.gets
       r.close
     end)
+
+    (0..3).each do |i|
+      pipe(proc do |w|
+        w.write("a" * ((4096 << i) - 4) + "\r\n" "a\r\n")
+        w.close
+      end,
+      proc do |r|
+        r.gets
+        assert_equal "a", r.gets(chomp: true)
+        assert_nil r.gets
+        r.close
+      end)
+    end
   end
 
   def test_gets_chomp_rs_nil
@@ -2809,6 +2822,28 @@ __END__
     end;
   end
 
+  def test_single_exception_on_close
+    a = []
+    t = []
+    10.times do
+      r, w = IO.pipe
+      a << [r, w]
+      t << Thread.new do
+        while r.gets
+        end rescue IOError
+        Thread.current.pending_interrupt?
+      end
+    end
+    a.each do |r, w|
+      w.write -"\n"
+      w.close
+      r.close
+    end
+    t.each do |th|
+      assert_equal false, th.value, '[ruby-core:81581] [Bug #13632]'
+    end
+  end
+
   def test_open_mode
     feature4742 = "[ruby-core:36338]"
     bug6055 = '[ruby-dev:45268]'
@@ -3526,5 +3561,21 @@ __END__
         end
       end
     end
+  end
+
+  def test_select_leak
+    assert_no_memory_leak([], <<-"end;", <<-"end;", rss: true, timeout: 60)
+      r, w = IO.pipe
+      rset = [r]
+      wset = [w]
+      Thread.new { IO.select(rset, wset, nil, 0) }.join
+    end;
+      20_000.times do
+        th = Thread.new { IO.select(rset, wset) }
+        Thread.pass until th.stop?
+        th.kill
+        th.join
+      end
+    end;
   end
 end

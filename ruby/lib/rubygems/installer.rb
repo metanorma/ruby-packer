@@ -214,7 +214,7 @@ class Gem::Installer
 
       ruby_executable = true
       existing = io.read.slice(%r{
-          ^(
+          ^\s*(
             gem \s |
             load \s Gem\.bin_path\( |
             load \s Gem\.activate_bin_path\(
@@ -697,10 +697,34 @@ class Gem::Installer
       unpack or File.writable?(gem_home)
   end
 
+  def verify_spec
+    unless spec.name =~ Gem::Specification::VALID_NAME_PATTERN
+      raise Gem::InstallError, "#{spec} has an invalid name"
+    end
+
+    if spec.raw_require_paths.any?{|path| path =~ /\r\n|\r|\n/ }
+      raise Gem::InstallError, "#{spec} has an invalid require_paths"
+    end
+
+    if spec.extensions.any?{|ext| ext =~ /\r\n|\r|\n/ }
+      raise Gem::InstallError, "#{spec} has an invalid extensions"
+    end
+
+    unless spec.specification_version.to_s =~ /\A\d+\z/
+      raise Gem::InstallError, "#{spec} has an invalid specification_version"
+    end
+
+    if spec.dependencies.any? {|dep| dep.type =~ /\r\n|\r|\n/ || dep.name =~ /\r\n|\r|\n/ }
+      raise Gem::InstallError, "#{spec} has an invalid dependencies"
+    end
+  end
+
   ##
   # Return the text for an application file.
 
   def app_script_text(bin_file_name)
+    # note that the `load` lines cannot be indented, as old RG versions match
+    # against the beginning of the line
     return <<-TEXT
 #{shebang bin_file_name}
 #
@@ -723,7 +747,12 @@ if ARGV.first
   end
 end
 
+if Gem.respond_to?(:activate_bin_path)
 load Gem.activate_bin_path('#{spec.name}', '#{bin_file_name}', version)
+else
+gem #{spec.name.dump}, version
+load Gem.bin_path(#{spec.name.dump}, #{bin_file_name.dump}, version)
+end
 TEXT
   end
 
@@ -813,6 +842,10 @@ TEXT
 
   def pre_install_checks
     verify_gem_home options[:unpack]
+
+    # The name and require_paths must be verified first, since it could contain
+    # ruby code that would be eval'ed in #ensure_loadable_spec
+    verify_spec
 
     ensure_loadable_spec
 

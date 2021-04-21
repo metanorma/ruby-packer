@@ -2,7 +2,7 @@
 
   array.c -
 
-  $Author: naruse $
+  $Author$
   created at: Fri Aug  6 09:46:12 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1775,8 +1775,8 @@ rb_ary_insert(int argc, VALUE *argv, VALUE ary)
 
     rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
     rb_ary_modify_check(ary);
-    if (argc == 1) return ary;
     pos = NUM2LONG(argv[0]);
+    if (argc == 1) return ary;
     if (pos == -1) {
 	pos = RARRAY_LEN(ary);
     }
@@ -3218,6 +3218,7 @@ static VALUE
 rb_ary_reject_bang(VALUE ary)
 {
     RETURN_SIZED_ENUMERATOR(ary, 0, 0, ary_enum_length);
+    rb_ary_modify(ary);
     return ary_reject_bang(ary);
 }
 
@@ -5691,6 +5692,26 @@ rb_ary_dig(int argc, VALUE *argv, VALUE self)
     return rb_obj_dig(argc, argv, self, Qnil);
 }
 
+static inline VALUE
+finish_exact_sum(long n, VALUE r, VALUE v, int z)
+{
+    if (n != 0)
+        v = rb_fix_plus(LONG2FIX(n), v);
+    if (r != Qundef) {
+	/* r can be an Integer when mathn is loaded */
+	if (FIXNUM_P(r))
+	    v = rb_fix_plus(r, v);
+	else if (RB_TYPE_P(r, T_BIGNUM))
+	    v = rb_big_plus(r, v);
+	else
+	    v = rb_rational_plus(r, v);
+    }
+    else if (!n && z) {
+        v = rb_fix_plus(LONG2FIX(0), v);
+    }
+    return v;
+}
+
 /*
  * call-seq:
  *   ary.sum(init=0)                    -> number
@@ -5772,31 +5793,11 @@ rb_ary_sum(int argc, VALUE *argv, VALUE ary)
         else
             goto not_exact;
     }
-    if (n != 0)
-        v = rb_fix_plus(LONG2FIX(n), v);
-    if (r != Qundef) {
-        /* r can be an Integer when mathn is loaded */
-        if (FIXNUM_P(r))
-            v = rb_fix_plus(r, v);
-        else if (RB_TYPE_P(r, T_BIGNUM))
-            v = rb_big_plus(r, v);
-        else
-            v = rb_rational_plus(r, v);
-    }
+    v = finish_exact_sum(n, r, v, argc!=0);
     return v;
 
   not_exact:
-    if (n != 0)
-        v = rb_fix_plus(LONG2FIX(n), v);
-    if (r != Qundef) {
-        /* r can be an Integer when mathn is loaded */
-        if (FIXNUM_P(r))
-            v = rb_fix_plus(r, v);
-        else if (RB_TYPE_P(r, T_BIGNUM))
-            v = rb_big_plus(r, v);
-        else
-            v = rb_rational_plus(r, v);
-    }
+    v = finish_exact_sum(n, r, v, i!=0);
 
     if (RB_FLOAT_TYPE_P(e)) {
         /*
@@ -5824,6 +5825,20 @@ rb_ary_sum(int argc, VALUE *argv, VALUE ary)
                 x = rb_num2dbl(e);
             else
                 goto not_float;
+
+            if (isnan(f)) continue;
+            if (isnan(x)) {
+                f = x;
+                continue;
+            }
+            if (isinf(x)) {
+                if (isinf(f) && signbit(x) != signbit(f))
+                    f = NAN;
+                else
+                    f = x;
+                continue;
+            }
+            if (isinf(f)) continue;
 
             t = f + x;
             if (fabs(f) >= fabs(x))
@@ -5883,7 +5898,8 @@ rb_ary_sum(int argc, VALUE *argv, VALUE ary)
  *  This method is safe to use with mutable objects such as hashes, strings or
  *  other arrays:
  *
- *     Array.new(4) { Hash.new } #=> [{}, {}, {}, {}]
+ *     Array.new(4) { Hash.new }  #=> [{}, {}, {}, {}]
+ *     Array.new(4) {|i| i.to_s } #=> ["0", "1", "2", "3"]
  *
  *  This is also a quick way to build up multi-dimensional arrays:
  *

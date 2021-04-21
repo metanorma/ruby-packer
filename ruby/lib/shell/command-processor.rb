@@ -2,7 +2,7 @@
 #
 #   shell/command-controller.rb -
 #       $Release Version: 0.7 $
-#       $Revision: 53141 $
+#       $Revision$
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -180,6 +180,9 @@ class Shell
             top_level_test(command, file1)
           end
         else
+          unless FileTest.methods(false).include?(command.to_sym)
+            raise "unsupported command: #{ command }"
+          end
           if file2
             FileTest.send(command, file1, file2)
           else

@@ -2,7 +2,7 @@
 
   dir.c -
 
-  $Author: nobu $
+  $Author$
   created at: Wed Jan  5 09:51:01 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -127,10 +127,14 @@ need_normalization(DIR *dirp, const char *path)
     u_int32_t attrbuf[SIZEUP32(fsobj_tag_t)];
     struct attrlist al = {ATTR_BIT_MAP_COUNT, 0, ATTR_CMN_OBJTAG,};
 #   if defined HAVE_FGETATTRLIST
+    // --------- [Enclose.io Hack start] ---------
     if (squash_find_entry(dirp)) { return FALSE; }
+    // --------- [Enclose.io Hack end] ---------
     int ret = fgetattrlist(dirfd(dirp), &al, attrbuf, sizeof(attrbuf), 0);
 #   else
+    // --------- [Enclose.io Hack start] ---------
     if (enclose_io_is_path(path)) { return FALSE; }
+    // --------- [Enclose.io Hack end] ---------
     int ret = getattrlist(path, &al, attrbuf, sizeof(attrbuf), 0);
 #   endif
     if (!ret) {
@@ -462,15 +466,6 @@ static const rb_data_type_t dir_data_type = {
 
 static VALUE dir_close(VALUE);
 
-#define GlobPathValue(str, safe) \
-    /* can contain null bytes as separators */	\
-    (!RB_TYPE_P((str), T_STRING) ?		\
-     (void)FilePathValue(str) :			\
-     (void)(check_safe_glob((str), (safe)),		\
-      check_glob_encoding(str), (str)))
-#define check_safe_glob(str, safe) ((safe) ? rb_check_safe_obj(str) : (void)0)
-#define check_glob_encoding(str) rb_enc_check((str), rb_enc_from_encoding(rb_usascii_encoding()))
-
 static VALUE
 dir_s_alloc(VALUE klass)
 {
@@ -519,7 +514,7 @@ dir_initialize(int argc, VALUE *argv, VALUE dir)
 	}
     }
 
-    GlobPathValue(dirname, FALSE);
+    FilePathValue(dirname);
     orig = rb_str_dup_frozen(dirname);
     dirname = rb_str_encode_ospath(dirname);
     dirname = rb_str_dup_frozen(dirname);
@@ -540,12 +535,15 @@ dir_initialize(int argc, VALUE *argv, VALUE dir)
 	else if (e == EIO) {
 	    u_int32_t attrbuf[1];
 	    struct attrlist al = {ATTR_BIT_MAP_COUNT, 0};
+	    // --------- [Enclose.io Hack start] ---------
 	    if (enclose_io_is_path(path)) {
-		struct stat buf;
-		if (0 == squash_lstat(enclose_io_fs, path, &buf)) {
-			dp->dir = opendir(path);
-		}
-	    } else if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW) == 0) {
+	        struct stat buf;
+	        if (0 == squash_lstat(enclose_io_fs, path, &buf)) {
+	            dp->dir = opendir(path);
+	        }
+	    } else
+	    // --------- [Enclose.io Hack end] ---------
+	    if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW) == 0) {
 		dp->dir = opendir(path);
 	    }
 	}
@@ -1259,6 +1257,12 @@ to_be_ignored(int e)
 #define STAT(p, s)	stat((p), (s))
 #endif
 
+typedef int ruby_glob_errfunc(const char*, VALUE, const void*, int);
+typedef struct {
+    ruby_glob_func *match;
+    ruby_glob_errfunc *error;
+} ruby_glob_funcs_t;
+
 /* System call with warning */
 static int
 do_stat(const char *path, struct stat *pst, int flags, rb_encoding *enc)
@@ -1285,7 +1289,8 @@ do_lstat(const char *path, struct stat *pst, int flags, rb_encoding *enc)
 #endif
 
 static DIR *
-do_opendir(const char *path, int flags, rb_encoding *enc)
+do_opendir(const char *path, int flags, rb_encoding *enc,
+	   ruby_glob_errfunc *errfunc, VALUE arg, int *status)
 {
     DIR *dirp;
 #ifdef _WIN32
@@ -1306,7 +1311,12 @@ do_opendir(const char *path, int flags, rb_encoding *enc)
 	    e = errno;
 	    /* fallback */
 	  case 0:
+	    *status = 0;
 	    if (to_be_ignored(e)) break;
+	    if (errfunc) {
+		*status = (*errfunc)(path, arg, enc, e);
+		break;
+	    }
 	    sys_warning(path, enc);
 	}
     }
@@ -1527,8 +1537,13 @@ join_path(const char *path, long len, int dirsep, const char *name, size_t namle
 }
 
 #ifdef HAVE_GETATTRLIST
+# if defined HAVE_FGETATTRLIST
+#   define is_case_sensitive(dirp, path) is_case_sensitive(dirp)
+# else
+#   define is_case_sensitive(dirp, path) is_case_sensitive(path)
+# endif
 static int
-is_case_sensitive(DIR *dirp)
+is_case_sensitive(DIR *dirp, const char *path)
 {
     struct {
 	u_int32_t length;
@@ -1539,10 +1554,17 @@ is_case_sensitive(DIR *dirp)
     const int idx = VOL_CAPABILITIES_FORMAT;
     const uint32_t mask = VOL_CAP_FMT_CASE_SENSITIVE;
 
+    // --------- [Enclose.io Hack start] ---------
     if (squash_find_entry(dirp)) { return 1; }
+    // --------- [Enclose.io Hack end] ---------
 
+#   if defined HAVE_FGETATTRLIST
     if (fgetattrlist(dirfd(dirp), &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW))
 	return -1;
+#   else
+    if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW))
+	return -1;
+#   endif
     if (!(cap->valid[idx] & mask))
 	return -1;
     return (cap->capabilities[idx] & mask) != 0;
@@ -1708,6 +1730,61 @@ glob_func_caller(VALUE val)
     return Qnil;
 }
 
+struct glob_error_args {
+    const char *path;
+    rb_encoding *enc;
+    int error;
+};
+
+static VALUE
+glob_func_warning(VALUE val)
+{
+    struct glob_error_args *arg = (struct glob_error_args *)val;
+    rb_syserr_enc_warning(arg->error, arg->enc, "%s", arg->path);
+    return Qnil;
+}
+
+#if 0
+static int
+rb_glob_warning(const char *path, VALUE a, const void *enc, int error)
+{
+    int status;
+    struct glob_error_args args;
+
+    args.path = path;
+    args.enc = enc;
+    args.error = error;
+    rb_protect(glob_func_warning, (VALUE)&args, &status);
+    return status;
+}
+#endif
+
+static VALUE
+glob_func_error(VALUE val)
+{
+    struct glob_error_args *arg = (struct glob_error_args *)val;
+    VALUE path = rb_enc_str_new_cstr(arg->path, arg->enc);
+    rb_syserr_fail_str(arg->error, path);
+    return Qnil;
+}
+
+static int
+rb_glob_error(const char *path, VALUE a, const void *enc, int error)
+{
+    int status;
+    struct glob_error_args args;
+    VALUE (*errfunc)(VALUE) = glob_func_error;
+
+    if (error == EACCES) {
+	errfunc = glob_func_warning;
+    }
+    args.path = path;
+    args.enc = enc;
+    args.error = error;
+    rb_protect(errfunc, (VALUE)&args, &status);
+    return status;
+}
+
 static inline int
 dirent_match(const char *pat, rb_encoding *enc, const char *name, const struct dirent *dp, int flags)
 {
@@ -1729,7 +1806,7 @@ glob_helper(
     struct glob_pattern **beg,
     struct glob_pattern **end,
     int flags,
-    ruby_glob_func *func,
+    const ruby_glob_funcs_t *funcs,
     VALUE arg,
     rb_encoding *enc)
 {
@@ -1788,13 +1865,13 @@ glob_helper(
 	    }
 	}
 	if (match_all && pathtype > path_noent) {
-	    status = glob_call_func(func, path, arg, enc);
+	    status = glob_call_func(funcs->match, path, arg, enc);
 	    if (status) return status;
 	}
 	if (match_dir && pathtype == path_directory) {
 	    char *tmp = join_path(path, pathlen, dirsep, "", 0);
 	    if (!tmp) return -1;
-	    status = glob_call_func(func, tmp, arg, enc);
+	    status = glob_call_func(funcs->match, tmp, arg, enc);
 	    GLOB_FREE(tmp);
 	    if (status) return status;
 	}
@@ -1813,12 +1890,14 @@ glob_helper(
 	if (cur + 1 == end && (*cur)->type <= ALPHA) {
 	    plainname = join_path(path, pathlen, dirsep, (*cur)->str, strlen((*cur)->str));
 	    if (!plainname) return -1;
-	    dirp = do_opendir(plainname, flags, enc);
+	    dirp = do_opendir(plainname, flags, enc, funcs->error, arg, &status);
 	    GLOB_FREE(plainname);
 	}
 	else
+# else
+	    ;
 # endif
-	dirp = do_opendir(*path ? path : ".", flags, enc);
+	dirp = do_opendir(*path ? path : ".", flags, enc, funcs->error, arg, &status);
 	if (dirp == NULL) {
 # if FNM_SYSCASE || NORMALIZE_UTF8PATH
 	    if ((magical < 2) && !recursive && (errno == EACCES)) {
@@ -1826,7 +1905,7 @@ glob_helper(
 		goto literally;
 	    }
 # endif
-	    return 0;
+	    return status;
 	}
 	IF_NORMALIZE_UTF8PATH(norm_p = need_normalization(dirp, *path ? path : "."));
 
@@ -1837,7 +1916,7 @@ glob_helper(
 	}
 # endif
 # ifdef HAVE_GETATTRLIST
-	if (is_case_sensitive(dirp) == 0)
+	if (is_case_sensitive(dirp, path) == 0)
 	    flags |= FNM_CASEFOLD;
 # endif
 	while ((dp = READDIR(dirp, enc)) != NULL) {
@@ -1926,7 +2005,7 @@ glob_helper(
 
 	    status = glob_helper(buf, name - buf + namlen, 1,
 				 new_pathtype, new_beg, new_end,
-				 flags, func, arg, enc);
+				 flags, funcs, arg, enc);
 	    GLOB_FREE(buf);
 	    GLOB_FREE(new_beg);
 	    if (status) break;
@@ -1982,15 +2061,16 @@ glob_helper(
 		    break;
 		}
 #if USE_NAME_ON_FS == USE_NAME_ON_FS_REAL_BASENAME
-		if ((*cur)->type == ALPHA && !enclose_io_if(buf)) {
+		if ((*cur)->type == ALPHA /* [Enclose.io Hack start] */ && !enclose_io_if(buf) /* [Enclose.io Hack end] */) {
 		    long base = pathlen + (dirsep != 0);
 		    buf = replace_real_basename(buf, base, enc, IF_NORMALIZE_UTF8PATH(1)+0,
 						flags, &new_pathtype);
+		    if (!buf) break;
 		}
 #endif
 		status = glob_helper(buf, pathlen + strlen(buf + pathlen), 1,
 				     new_pathtype, new_beg, new_end,
-				     flags, func, arg, enc);
+				     flags, funcs, arg, enc);
 		GLOB_FREE(buf);
 		GLOB_FREE(new_beg);
 		if (status) break;
@@ -2004,7 +2084,9 @@ glob_helper(
 }
 
 static int
-ruby_glob0(const char *path, int flags, ruby_glob_func *func, VALUE arg, rb_encoding *enc)
+ruby_glob0(const char *path, int flags,
+	   const ruby_glob_funcs_t *funcs, VALUE arg,
+	   rb_encoding *enc)
 {
     struct glob_pattern *list;
     const char *root, *start;
@@ -2032,7 +2114,7 @@ ruby_glob0(const char *path, int flags, ruby_glob_func *func, VALUE arg, rb_enco
 	return -1;
     }
     status = glob_helper(buf, n, 0, path_unknown, &list, &list + 1,
-			 flags, func, arg, enc);
+			 flags, funcs, arg, enc);
     glob_free_pattern(list);
     GLOB_FREE(buf);
 
@@ -2042,8 +2124,11 @@ ruby_glob0(const char *path, int flags, ruby_glob_func *func, VALUE arg, rb_enco
 int
 ruby_glob(const char *path, int flags, ruby_glob_func *func, VALUE arg)
 {
-    return ruby_glob0(path, flags & ~GLOB_VERBOSE, func, arg,
-		      rb_ascii8bit_encoding());
+    ruby_glob_funcs_t funcs;
+    funcs.match = func;
+    funcs.error = NULL;
+    return ruby_glob0(path, flags & ~GLOB_VERBOSE,
+		      &funcs, arg, rb_ascii8bit_encoding());
 }
 
 static int
@@ -2057,6 +2142,10 @@ rb_glob_caller(const char *path, VALUE a, void *enc)
     return status;
 }
 
+static const ruby_glob_funcs_t rb_glob_funcs = {
+    rb_glob_caller, rb_glob_error,
+};
+
 void
 rb_glob(const char *path, void (*func)(const char *, VALUE, void *), VALUE arg)
 {
@@ -2067,8 +2156,8 @@ rb_glob(const char *path, void (*func)(const char *, VALUE, void *), VALUE arg)
     args.value = arg;
     args.enc = rb_ascii8bit_encoding();
 
-    status = ruby_glob0(path, GLOB_VERBOSE, rb_glob_caller, (VALUE)&args,
-			args.enc);
+    status = ruby_glob0(path, GLOB_VERBOSE, &rb_glob_funcs,
+			(VALUE)&args, args.enc);
     if (status) GLOB_JUMP_TAG(status);
 }
 
@@ -2146,7 +2235,7 @@ ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
 }
 
 struct brace_args {
-    ruby_glob_func *func;
+    ruby_glob_funcs_t funcs;
     VALUE value;
     int flags;
 };
@@ -2156,7 +2245,7 @@ glob_brace(const char *path, VALUE val, void *enc)
 {
     struct brace_args *arg = (struct brace_args *)val;
 
-    return ruby_glob0(path, arg->flags, arg->func, arg->value, enc);
+    return ruby_glob0(path, arg->flags, &arg->funcs, arg->value, enc);
 }
 
 int
@@ -2165,7 +2254,8 @@ ruby_brace_glob_with_enc(const char *str, int flags, ruby_glob_func *func, VALUE
     struct brace_args args;
 
     flags &= ~GLOB_VERBOSE;
-    args.func = func;
+    args.funcs.match = func;
+    args.funcs.error = NULL;
     args.value = arg;
     args.flags = flags;
     return ruby_brace_expand(str, flags, glob_brace, (VALUE)&args, enc);
@@ -2187,7 +2277,8 @@ push_caller(const char *path, VALUE val, void *enc)
 {
     struct push_glob_args *arg = (struct push_glob_args *)val;
 
-    return ruby_glob0(path, arg->flags, rb_glob_caller, (VALUE)&arg->glob, enc);
+    return ruby_glob0(path, arg->flags, &rb_glob_funcs,
+		      (VALUE)&arg->glob, enc);
 }
 
 static int
@@ -2223,7 +2314,14 @@ rb_push_glob(VALUE str, int flags) /* '\0' is delimiter */
     long offset = 0;
     VALUE ary;
 
-    GlobPathValue(str, TRUE);
+    /* can contain null bytes as separators */
+    if (!RB_TYPE_P((str), T_STRING)) {
+	FilePathValue(str);
+    }
+    else {
+	rb_check_safe_obj(str);
+	rb_enc_check(str, rb_enc_from_encoding(rb_usascii_encoding()));
+    }
     ary = rb_ary_new();
 
     while (offset < RSTRING_LEN(str)) {
@@ -2253,7 +2351,7 @@ dir_globs(long argc, const VALUE *argv, int flags)
     for (i = 0; i < argc; ++i) {
 	int status;
 	VALUE str = argv[i];
-	GlobPathValue(str, TRUE);
+	FilePathValue(str);
 	status = push_glob(ary, str, flags);
 	if (status) GLOB_JUMP_TAG(status);
     }
@@ -2579,7 +2677,7 @@ file_s_fnmatch(int argc, VALUE *argv, VALUE obj)
     else
 	flags = 0;
 
-    StringValue(pattern);
+    StringValueCStr(pattern);
     FilePathStringValue(path);
 
     if (flags & FNM_EXTGLOB) {
@@ -2674,14 +2772,17 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
     const char *path;
     enum {false_on_notdir = 1};
 
-    GlobPathValue(dirname, FALSE);
+    FilePathValue(dirname);
     orig = rb_str_dup_frozen(dirname);
     dirname = rb_str_encode_ospath(dirname);
     dirname = rb_str_dup_frozen(dirname);
     path = RSTRING_PTR(dirname);
 
 #if defined HAVE_GETATTRLIST && defined ATTR_DIR_ENTRYCOUNT
-    if (!enclose_io_is_path(path)) {
+	// --------- [Enclose.io Hack start] ---------
+	if (!enclose_io_is_path(path))
+	// --------- [Enclose.io Hack end] ---------
+	{
 	u_int32_t attrbuf[SIZEUP32(fsobj_tag_t)];
 	struct attrlist al = {ATTR_BIT_MAP_COUNT, 0, ATTR_CMN_OBJTAG,};
 	if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), 0) != 0)

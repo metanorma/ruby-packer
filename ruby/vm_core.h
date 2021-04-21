@@ -2,7 +2,7 @@
 
   vm_core.h -
 
-  $Author: naruse $
+  $Author$
   created at: 04/01/01 19:41:38 JST
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -427,7 +427,7 @@ enum ruby_special_exceptions {
     ruby_error_reenter,
     ruby_error_nomemory,
     ruby_error_sysstack,
-    ruby_error_closed_stream,
+    ruby_error_stream_closed,
     ruby_special_error_count
 };
 
@@ -490,6 +490,7 @@ typedef struct rb_vm_struct {
     struct rb_thread_struct *main_thread;
     struct rb_thread_struct *running_thread;
 
+    struct list_head waiting_fds; /* <=> struct waiting_fd */
     struct list_head living_threads;
     size_t living_thread_num;
     VALUE thgroup_default;
@@ -711,8 +712,6 @@ typedef struct rb_thread_struct {
 
     /* passing state */
     int state;
-
-    int waiting_fd;
 
     /* for rb_iterate */
     VALUE passed_block_handler;
@@ -1445,6 +1444,7 @@ void rb_thread_wakeup_timer_thread(void);
 static inline void
 rb_vm_living_threads_init(rb_vm_t *vm)
 {
+    list_head_init(&vm->waiting_fds);
     list_head_init(&vm->living_threads);
     vm->living_thread_num = 0;
 }
@@ -1476,8 +1476,6 @@ void rb_vm_rewind_cfp(rb_thread_t *th, rb_control_frame_t *cfp);
 void rb_vm_register_special_exception(enum ruby_special_exceptions sp, VALUE exception_class, const char *mesg);
 
 void rb_gc_mark_machine_stack(rb_thread_t *th);
-
-int rb_autoloading_value(VALUE mod, ID id, VALUE* value);
 
 void rb_vm_rewrite_cref(rb_cref_t *node, VALUE old_klass, VALUE new_klass, rb_cref_t **new_cref_ptr);
 

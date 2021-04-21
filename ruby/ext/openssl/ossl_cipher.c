@@ -23,7 +23,7 @@
 #define GetCipher(obj, ctx) do { \
     GetCipherInit((obj), (ctx)); \
     if (!(ctx)) { \
-	ossl_raise(rb_eRuntimeError, "Cipher not inititalized!"); \
+	ossl_raise(rb_eRuntimeError, "Cipher not initialized!"); \
     } \
 } while (0)
 #define SafeGetCipher(obj, ctx) do { \
@@ -122,7 +122,7 @@ ossl_cipher_initialize(VALUE self, VALUE str)
     name = StringValueCStr(str);
     GetCipherInit(self, ctx);
     if (ctx) {
-	ossl_raise(rb_eRuntimeError, "Cipher already inititalized!");
+	ossl_raise(rb_eRuntimeError, "Cipher already initialized!");
     }
     AllocCipher(self, ctx);
     if (!(cipher = EVP_get_cipherbyname(name))) {
@@ -321,6 +321,8 @@ ossl_cipher_pkcs5_keyivgen(int argc, VALUE *argv, VALUE self)
 	salt = (unsigned char *)RSTRING_PTR(vsalt);
     }
     iter = NIL_P(viter) ? 2048 : NUM2INT(viter);
+    if (iter <= 0)
+	rb_raise(rb_eArgError, "iterations must be a positive integer");
     digest = NIL_P(vdigest) ? EVP_md5() : GetDigestPtr(vdigest);
     GetCipher(self, ctx);
     EVP_BytesToKey(EVP_CIPHER_CTX_cipher(ctx), digest, salt,
@@ -418,7 +420,7 @@ ossl_cipher_update(int argc, VALUE *argv, VALUE self)
  *  Returns the remaining data held in the cipher object. Further calls to
  *  Cipher#update or Cipher#final will return garbage. This call should always
  *  be made as the last call of an encryption or decryption operation, after
- *  after having fed the entire plaintext or ciphertext to the Cipher instance.
+ *  having fed the entire plaintext or ciphertext to the Cipher instance.
  *
  *  If an authenticated cipher was used, a CipherError is raised if the tag
  *  could not be authenticated successfully. Only call this method after
@@ -580,6 +582,8 @@ ossl_cipher_set_auth_data(VALUE self, VALUE data)
     in_len = RSTRING_LEN(data);
 
     GetCipher(self, ctx);
+    if (!(EVP_CIPHER_flags(EVP_CIPHER_CTX_cipher(ctx)) & EVP_CIPH_FLAG_AEAD_CIPHER))
+	ossl_raise(eCipherError, "AEAD not supported by this cipher");
 
     if (!ossl_cipher_update_long(ctx, NULL, &out_len, in, in_len))
         ossl_raise(eCipherError, "couldn't set additional authenticated data");
@@ -631,13 +635,11 @@ ossl_cipher_get_auth_tag(int argc, VALUE *argv, VALUE self)
  *  call-seq:
  *     cipher.auth_tag = string -> string
  *
- *  Sets the authentication tag to verify the contents of the
- *  ciphertext. The tag must be set after calling Cipher#decrypt,
- *  Cipher#key= and Cipher#iv=, but before assigning the associated
- *  authenticated data using Cipher#auth_data= and of course, before
- *  decrypting any of the ciphertext. After all decryption is
- *  performed, the tag is verified automatically in the call to
- *  Cipher#final.
+ *  Sets the authentication tag to verify the integrity of the ciphertext.
+ *  This can be called only when the cipher supports AE. The tag must be set
+ *  after calling Cipher#decrypt, Cipher#key= and Cipher#iv=, but before
+ *  calling Cipher#final. After all decryption is performed, the tag is
+ *  verified automatically in the call to Cipher#final.
  *
  *  For OCB mode, the tag length must be supplied with #auth_tag_len=
  *  beforehand.
@@ -1023,7 +1025,7 @@ Init_ossl_cipher(void)
      * An example using the GCM (Galois/Counter Mode). You have 16 bytes +key+,
      * 12 bytes (96 bits) +nonce+ and the associated data +auth_data+. Be sure
      * not to reuse the +key+ and +nonce+ pair. Reusing an nonce ruins the
-     * security gurantees of GCM mode.
+     * security guarantees of GCM mode.
      *
      *   cipher = OpenSSL::Cipher::AES.new(128, :GCM).encrypt
      *   cipher.key = key

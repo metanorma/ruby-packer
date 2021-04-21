@@ -344,13 +344,22 @@ ossl_x509store_add_file(VALUE self, VALUE file)
     lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
     if(lookup == NULL) ossl_raise(eX509StoreError, NULL);
     // --------- [Enclose.io Hack start] ---------
-    #ifdef ENCLOSE_IO_RUBYC_2ND_PASS
-      path = enclose_io_ifextract(path, NULL);
-    #endif
+#ifdef ENCLOSE_IO_RUBYC_2ND_PASS
+    path = enclose_io_ifextract(path, NULL);
+#endif
     // --------- [Enclose.io Hack end] ---------
     if(X509_LOOKUP_load_file(lookup, path, X509_FILETYPE_PEM) != 1){
         ossl_raise(eX509StoreError, NULL);
     }
+#if OPENSSL_VERSION_NUMBER < 0x10101000 || defined(LIBRESSL_VERSION_NUMBER)
+    /*
+     * X509_load_cert_crl_file() which is called from X509_LOOKUP_load_file()
+     * did not check the return value of X509_STORE_add_{cert,crl}(), leaking
+     * "cert already in hash table" errors on the error queue, if duplicate
+     * certificates are found. This will be fixed by OpenSSL 1.1.1.
+     */
+    ossl_clear_error();
+#endif
 
     return self;
 }
@@ -800,6 +809,7 @@ ossl_x509stctx_set_time(VALUE self, VALUE time)
 void
 Init_ossl_x509store(void)
 {
+#undef rb_intern
 #if 0
     mOSSL = rb_define_module("OpenSSL");
     eOSSLError = rb_define_class_under(mOSSL, "OpenSSLError", rb_eStandardError);

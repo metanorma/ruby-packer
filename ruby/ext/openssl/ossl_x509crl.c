@@ -115,7 +115,7 @@ ossl_x509crl_initialize(int argc, VALUE *argv, VALUE self)
 	return self;
     }
     arg = ossl_to_der_if_possible(arg);
-    in = ossl_obj2bio(arg);
+    in = ossl_obj2bio(&arg);
     crl = PEM_read_bio_X509_CRL(in, &x, NULL, NULL);
     DATA_PTR(self) = x;
     if (!crl) {
@@ -366,9 +366,12 @@ static VALUE
 ossl_x509crl_verify(VALUE self, VALUE key)
 {
     X509_CRL *crl;
+    EVP_PKEY *pkey;
 
     GetX509CRL(self, crl);
-    switch (X509_CRL_verify(crl, GetPKeyPtr(key))) {
+    pkey = GetPKeyPtr(key);
+    ossl_pkey_check_public_key(pkey);
+    switch (X509_CRL_verify(crl, pkey)) {
       case 1:
 	return Qtrue;
       case 0:
