@@ -6,7 +6,7 @@
 # Copyright (c) 2003 Internet Programming with Ruby writers. All rights
 # reserved.
 #
-# $Id: cgi.rb 53141 2015-12-16 05:07:31Z naruse $
+# $Id$
 
 require "webrick/httprequest"
 require "webrick/httpresponse"

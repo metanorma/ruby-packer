@@ -2,7 +2,7 @@
 #
 #   shell/command-controller.rb -
 #       $Release Version: 0.7 $
-#       $Revision: 53141 $
+#       $Revision$
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

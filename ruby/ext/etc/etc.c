@@ -2,7 +2,7 @@
 
   etc.c -
 
-  $Author: nobu $
+  $Author$
   created at: Tue Mar 22 18:39:19 JST 1994
 
 ************************************************/

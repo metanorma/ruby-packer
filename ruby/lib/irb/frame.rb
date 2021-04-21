@@ -2,7 +2,7 @@
 #
 #   frame.rb -
 #   	$Release Version: 0.9$
-#   	$Revision: 53141 $
+#   	$Revision$
 #   	by Keiju ISHITSUKA(Nihon Rational Software Co.,Ltd)
 #
 # --

@@ -2,7 +2,7 @@
 
   dln.c -
 
-  $Author: nobu $
+  $Author$
   created at: Tue Jan 18 17:05:06 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -114,10 +114,6 @@ dln_loaderror(const char *format, ...)
 #else
 #define isdirsep(x) ((x) == '/')
 #endif
-
-// ======= [Enclose.io Hack start] =========
-#include "enclose_io.h"
-// ======= [Enclose.io Hack end] =========
 
 static size_t
 init_funcname_len(const char **file)
