@@ -1,0 +1,39 @@
+# -*- encoding: utf-8 -*-
+# stub: power_assert 0.4.1 ruby lib
+
+Gem::Specification.new do |s|
+  s.name = "power_assert".freeze
+  s.version = "0.4.1"
+
+  s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
+  s.require_paths = ["lib".freeze]
+  s.authors = ["Kazuki Tsujimoto".freeze]
+  s.date = "2016-11-27"
+  s.description = "Power Assert for Ruby. Power Assert shows each value of variables and method calls in the expression. It is useful for testing, providing which value wasn't correct when the condition is not satisfied.".freeze
+  s.email = ["kazuki@callcc.net".freeze]
+  s.extra_rdoc_files = ["README.rdoc".freeze]
+  s.files = [".gitignore".freeze, ".travis.yml".freeze, "BSDL".freeze, "COPYING".freeze, "Gemfile".freeze, "LEGAL".freeze, "README.rdoc".freeze, "Rakefile".freeze, "benchmarks/bm_yhpg.rb".freeze, "benchmarks/helper.rb".freeze, "lib/power_assert.rb".freeze, "lib/power_assert/configuration.rb".freeze, "lib/power_assert/enable_tracepoint_events.rb".freeze, "lib/power_assert/version.rb".freeze, "power_assert.gemspec".freeze, "test/helper.rb".freeze, "test/test_power_assert.rb".freeze]
+  s.homepage = "https://github.com/k-tsj/power_assert".freeze
+  s.licenses = ["2-clause BSDL".freeze, "Ruby's".freeze]
+  s.rdoc_options = ["--main".freeze, "README.rdoc".freeze]
+  s.rubygems_version = "2.6.8".freeze
+  s.summary = "Power Assert for Ruby".freeze
+
+  if s.respond_to? :specification_version then
+    s.specification_version = 4
+
+    if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
+      s.add_development_dependency(%q<test-unit>.freeze, [">= 0"])
+      s.add_development_dependency(%q<rake>.freeze, [">= 0"])
+      s.add_development_dependency(%q<simplecov>.freeze, [">= 0"])
+    else
+      s.add_dependency(%q<test-unit>.freeze, [">= 0"])
+      s.add_dependency(%q<rake>.freeze, [">= 0"])
+      s.add_dependency(%q<simplecov>.freeze, [">= 0"])
+    end
+  else
+    s.add_dependency(%q<test-unit>.freeze, [">= 0"])
+    s.add_dependency(%q<rake>.freeze, [">= 0"])
+    s.add_dependency(%q<simplecov>.freeze, [">= 0"])
+  end
+end

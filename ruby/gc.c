@@ -2,7 +2,7 @@
 
   gc.c -
 
-  $Author$
+  $Author: ktsj $
   created at: Tue Oct  5 09:44:46 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

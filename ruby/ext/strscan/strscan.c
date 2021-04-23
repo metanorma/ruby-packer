@@ -1,5 +1,5 @@
 /*
-    $Id$
+    $Id: strscan.c 56282 2016-09-28 05:11:22Z nobu $
 
     Copyright (c) 1999-2006 Minero Aoki
 
@@ -1339,7 +1339,7 @@ Init_strscan(void)
     tmp = rb_str_new2(STRSCAN_VERSION);
     rb_obj_freeze(tmp);
     rb_const_set(StringScanner, rb_intern("Version"), tmp);
-    tmp = rb_str_new2("$Id$");
+    tmp = rb_str_new2("$Id: strscan.c 56282 2016-09-28 05:11:22Z nobu $");
     rb_obj_freeze(tmp);
     rb_const_set(StringScanner, rb_intern("Id"), tmp);
 

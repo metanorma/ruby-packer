@@ -3,9 +3,9 @@
 #
 #--
 # $Release Version: 1.1.2 $
-# $Revision$
-# $Id$
-# $Author$
+# $Revision: 53141 $
+# $Id: scanf.rb 53141 2015-12-16 05:07:31Z naruse $
+# $Author: naruse $
 #++
 #
 # == Description

@@ -8,7 +8,7 @@
 # All rights reserved.  You can redistribute and/or modify it under the same
 # terms as Ruby.
 #
-#   $Id$
+#   $Id: sha2.rb 56456 2016-10-20 07:57:31Z svn $
 
 require 'digest'
 require 'digest/sha2.so'

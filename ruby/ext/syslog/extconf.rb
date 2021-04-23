@@ -1,6 +1,6 @@
 # frozen_string_literal: false
 # $RoughId: extconf.rb,v 1.3 2001/11/24 17:49:26 knu Exp $
-# $Id$
+# $Id: extconf.rb 53143 2015-12-16 05:31:54Z naruse $
 
 require 'mkmf'
 

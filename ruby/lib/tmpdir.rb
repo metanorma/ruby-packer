@@ -2,7 +2,7 @@
 #
 # tmpdir - retrieve temporary directory path
 #
-# $Id$
+# $Id: tmpdir.rb 53945 2016-02-26 02:11:14Z hsbt $
 #
 
 require 'fileutils'

@@ -2,7 +2,7 @@
 
   parse.y -
 
-  $Author$
+  $Author: naruse $
   created at: Fri May 28 18:02:42 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

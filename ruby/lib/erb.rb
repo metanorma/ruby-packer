@@ -259,7 +259,7 @@ require "cgi/util"
 # Rails, the web application framework, uses ERB to create views.
 #
 class ERB
-  Revision = '$Date::                           $' # :nodoc: #'
+  Revision = '$Date:: 2016-11-06 01:56:52 +0900#$' # :nodoc: #'
 
   # Returns revision information for the erb.rb module.
   def self.version

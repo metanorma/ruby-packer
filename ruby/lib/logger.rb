@@ -6,7 +6,7 @@
 # License::
 #   You can redistribute it and/or modify it under the same terms of Ruby's
 #   license; either the dual license version in 2003, or any later version.
-# Revision:: $Id$
+# Revision:: $Id: logger.rb 56815 2016-11-16 06:59:42Z nobu $
 #
 # A simple system for logging messages.  See Logger for more documentation.
 
@@ -225,7 +225,7 @@ require 'monitor'
 #
 class Logger
   VERSION = "1.2.7"
-  _, name, rev = %w$Id$
+  _, name, rev = %w$Id: logger.rb 56815 2016-11-16 06:59:42Z nobu $
   if name
     name = name.chomp(",v")
   else

@@ -1,5 +1,5 @@
 # frozen_string_literal: false
-# $Id$
+# $Id: test_fileutils.rb 56892 2016-11-24 03:01:59Z nobu $
 
 require 'fileutils'
 require 'etc'

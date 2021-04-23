@@ -1,5 +1,5 @@
 /* $RoughId: md5init.c,v 1.2 2001/07/13 19:49:10 knu Exp $ */
-/* $Id$ */
+/* $Id: md5init.c 56459 2016-10-20 13:18:52Z kazu $ */
 
 #include <ruby/ruby.h>
 #include "../digest.h"

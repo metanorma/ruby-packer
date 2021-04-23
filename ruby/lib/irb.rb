@@ -2,7 +2,7 @@
 #
 #   irb.rb - irb main module
 #       $Release Version: 0.9.6 $
-#       $Revision$
+#       $Revision: 56624 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

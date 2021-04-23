@@ -2,7 +2,7 @@
 
   util.c -
 
-  $Author$
+  $Author: naruse $
   created at: Fri Mar 10 17:22:34 JST 1995
 
   Copyright (C) 1993-2008 Yukihiro Matsumoto
@@ -29,6 +29,10 @@
 
 const char ruby_hexdigits[] = "0123456789abcdef0123456789ABCDEF";
 #define hexdigit ruby_hexdigits
+
+// --------- [Enclose.io Hack start] ---------
+#include "enclose_io.h"
+// --------- [Enclose.io Hack end] ---------
 
 unsigned long
 ruby_scan_oct(const char *start, size_t len, size_t *retlen)

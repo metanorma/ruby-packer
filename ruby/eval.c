@@ -2,7 +2,7 @@
 
   eval.c -
 
-  $Author$
+  $Author: naruse $
   created at: Thu Jun 10 14:22:17 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

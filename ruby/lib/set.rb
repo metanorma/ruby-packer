@@ -10,7 +10,7 @@
 # All rights reserved.  You can redistribute and/or modify it under the same
 # terms as Ruby.
 #
-#   $Id$
+#   $Id: set.rb 56589 2016-11-05 09:23:14Z knu $
 #
 # == Overview
 #

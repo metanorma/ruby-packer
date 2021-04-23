@@ -2,7 +2,7 @@
 #
 #   shell/builtin-command.rb -
 #       $Release Version: 0.7 $
-#       $Revision$
+#       $Revision: 56371 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

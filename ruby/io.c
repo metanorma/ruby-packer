@@ -2,7 +2,7 @@
 
   io.c -
 
-  $Author$
+  $Author: naruse $
   created at: Fri Oct 15 18:08:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -137,6 +137,10 @@ off_t __syscall(quad_t number, ...);
 #undef open
 #define open	rb_w32_uopen
 #endif
+
+// --------- [Enclose.io Hack start] ---------
+#include "enclose_io.h"
+// --------- [Enclose.io Hack end] ---------
 
 VALUE rb_cIO;
 VALUE rb_eEOFError;

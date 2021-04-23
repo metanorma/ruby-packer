@@ -2,7 +2,7 @@
 
   vm_eval.c -
 
-  $Author$
+  $Author: naruse $
   created at: Sat May 24 16:02:32 JST 2008
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

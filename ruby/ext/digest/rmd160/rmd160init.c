@@ -1,5 +1,5 @@
 /* $RoughId: rmd160init.c,v 1.3 2001/07/13 20:00:43 knu Exp $ */
-/* $Id$ */
+/* $Id: rmd160init.c 56456 2016-10-20 07:57:31Z svn $ */
 
 #include <ruby/ruby.h>
 #include "../digest.h"

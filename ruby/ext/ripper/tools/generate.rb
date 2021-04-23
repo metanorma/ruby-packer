@@ -1,5 +1,5 @@
 # frozen_string_literal: false
-# $Id$
+# $Id: generate.rb 53143 2015-12-16 05:31:54Z naruse $
 
 require 'optparse'
 

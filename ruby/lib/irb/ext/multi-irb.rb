@@ -2,7 +2,7 @@
 #
 #   irb/multi-irb.rb - multiple irb module
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 53141 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

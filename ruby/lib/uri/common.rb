@@ -3,7 +3,7 @@
 # = uri/common.rb
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
-# Revision:: $Id$
+# Revision:: $Id: common.rb 57870 2017-03-11 17:55:02Z naruse $
 # License::
 #   You can redistribute it and/or modify it under the same term as Ruby.
 #
