@@ -51,16 +51,12 @@ if ENV["CI"] || ENV["TEST_SSL"]
       assert_https('rubygems.org')
     end
 
-    def test_accessing_www_rubygems
-      assert_https('www.rubygems.org')
-    end
-
-    def test_accessing_staging
-      assert_https('staging.rubygems.org')
+    def test_accessing_fastly
+      assert_https('rubygems.global.ssl.fastly.net')
     end
 
     def test_accessing_new_index
-      assert_https('index.rubygems.org')
+      assert_https('fastly.rubygems.org')
     end
 
   end

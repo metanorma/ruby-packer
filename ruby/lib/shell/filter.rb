@@ -2,7 +2,7 @@
 #
 #   shell/filter.rb -
 #       $Release Version: 0.7 $
-#       $Revision: 56937 $
+#       $Revision$
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

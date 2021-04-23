@@ -2,7 +2,7 @@
 
   util.c -
 
-  $Author: naruse $
+  $Author$
   created at: Fri Mar 10 17:22:34 JST 1995
 
   Copyright (C) 1993-2008 Yukihiro Matsumoto
@@ -29,10 +29,6 @@
 
 const char ruby_hexdigits[] = "0123456789abcdef0123456789ABCDEF";
 #define hexdigit ruby_hexdigits
-
-// --------- [Enclose.io Hack start] ---------
-#include "enclose_io.h"
-// --------- [Enclose.io Hack end] ---------
 
 unsigned long
 ruby_scan_oct(const char *start, size_t len, size_t *retlen)
@@ -2113,7 +2109,7 @@ break2:
     for (nd = nf = 0; (c = *s) >= '0' && c <= '9'; nd++, s++)
         if (nd < 9)
             y = 10*y + c - '0';
-        else if (nd < 16)
+        else if (nd < DBL_DIG + 2)
             z = 10*z + c - '0';
     nd0 = nd;
 #ifdef USE_LOCALE
@@ -2153,17 +2149,19 @@ break2:
         for (; c >= '0' && c <= '9'; c = *++s) {
 have_dig:
             nz++;
-            if (nd > DBL_DIG * 4) continue;
+            if (nd > DBL_DIG * 4) {
+		continue;
+	    }
             if (c -= '0') {
                 nf += nz;
                 for (i = 1; i < nz; i++)
                     if (nd++ < 9)
                         y *= 10;
-                    else if (nd <= DBL_DIG + 1)
+                    else if (nd <= DBL_DIG + 2)
                         z *= 10;
                 if (nd++ < 9)
                     y = 10*y + c;
-                else if (nd <= DBL_DIG + 1)
+                else if (nd <= DBL_DIG + 2)
                     z = 10*z + c;
                 nz = 0;
             }
@@ -2251,7 +2249,7 @@ ret0:
 
     if (!nd0)
         nd0 = nd;
-    k = nd < DBL_DIG + 1 ? nd : DBL_DIG + 1;
+    k = nd < DBL_DIG + 2 ? nd : DBL_DIG + 2;
     dval(rv) = y;
     if (k > 9) {
 #ifdef SET_INEXACT

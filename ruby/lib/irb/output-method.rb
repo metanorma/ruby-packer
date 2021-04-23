@@ -2,7 +2,7 @@
 #
 #   output-method.rb - output methods used by irb
 #   	$Release Version: 0.9.6$
-#   	$Revision: 56371 $
+#   	$Revision$
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

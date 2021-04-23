@@ -2,7 +2,7 @@
 #
 #   irb/ruby-lex.rb - ruby lexcal analyzer
 #   	$Release Version: 0.9.6$
-#   	$Revision: 57027 $
+#   	$Revision$
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
