@@ -2,7 +2,7 @@
 #
 #   shell/process-controller.rb -
 #       $Release Version: 0.7 $
-#       $Revision$
+#       $Revision: 56865 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

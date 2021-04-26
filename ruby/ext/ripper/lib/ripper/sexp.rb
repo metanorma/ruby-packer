@@ -1,6 +1,6 @@
 # frozen_string_literal: false
 #
-# $Id$
+# $Id: sexp.rb 53143 2015-12-16 05:31:54Z naruse $
 #
 # Copyright (c) 2004,2005 Minero Aoki
 #

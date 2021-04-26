@@ -84,18 +84,6 @@ class TestSprintf < Test::Unit::TestCase
     assert_equal("NaN", sprintf("%-f", nan))
     assert_equal("+NaN", sprintf("%+f", nan))
 
-    assert_equal("NaN", sprintf("%3f", nan))
-    assert_equal("NaN", sprintf("%-3f", nan))
-    assert_equal("+NaN", sprintf("%+3f", nan))
-
-    assert_equal(" NaN", sprintf("% 3f", nan))
-    assert_equal(" NaN", sprintf("%- 3f", nan))
-    assert_equal("+NaN", sprintf("%+ 3f", nan))
-
-    assert_equal(" NaN", sprintf("% 03f", nan))
-    assert_equal(" NaN", sprintf("%- 03f", nan))
-    assert_equal("+NaN", sprintf("%+ 03f", nan))
-
     assert_equal("     NaN", sprintf("%8f", nan))
     assert_equal("NaN     ", sprintf("%-8f", nan))
     assert_equal("    +NaN", sprintf("%+8f", nan))
@@ -119,26 +107,6 @@ class TestSprintf < Test::Unit::TestCase
     assert_equal("Inf", sprintf("%-f", inf))
     assert_equal("+Inf", sprintf("%+f", inf))
 
-    assert_equal(" Inf", sprintf("% f", inf))
-    assert_equal(" Inf", sprintf("%- f", inf))
-    assert_equal("+Inf", sprintf("%+ f", inf))
-
-    assert_equal(" Inf", sprintf("% 0f", inf))
-    assert_equal(" Inf", sprintf("%- 0f", inf))
-    assert_equal("+Inf", sprintf("%+ 0f", inf))
-
-    assert_equal("Inf", sprintf("%3f", inf))
-    assert_equal("Inf", sprintf("%-3f", inf))
-    assert_equal("+Inf", sprintf("%+3f", inf))
-
-    assert_equal(" Inf", sprintf("% 3f", inf))
-    assert_equal(" Inf", sprintf("%- 3f", inf))
-    assert_equal("+Inf", sprintf("%+ 3f", inf))
-
-    assert_equal(" Inf", sprintf("% 03f", inf))
-    assert_equal(" Inf", sprintf("%- 03f", inf))
-    assert_equal("+Inf", sprintf("%+ 03f", inf))
-
     assert_equal("     Inf", sprintf("%8f", inf))
     assert_equal("Inf     ", sprintf("%-8f", inf))
     assert_equal("    +Inf", sprintf("%+8f", inf))
@@ -158,26 +126,6 @@ class TestSprintf < Test::Unit::TestCase
     assert_equal("-Inf", sprintf("%f", -inf))
     assert_equal("-Inf", sprintf("%-f", -inf))
     assert_equal("-Inf", sprintf("%+f", -inf))
-
-    assert_equal("-Inf", sprintf("% f", -inf))
-    assert_equal("-Inf", sprintf("%- f", -inf))
-    assert_equal("-Inf", sprintf("%+ f", -inf))
-
-    assert_equal("-Inf", sprintf("% 0f", -inf))
-    assert_equal("-Inf", sprintf("%- 0f", -inf))
-    assert_equal("-Inf", sprintf("%+ 0f", -inf))
-
-    assert_equal("-Inf", sprintf("%4f", -inf))
-    assert_equal("-Inf", sprintf("%-4f", -inf))
-    assert_equal("-Inf", sprintf("%+4f", -inf))
-
-    assert_equal("-Inf", sprintf("% 4f", -inf))
-    assert_equal("-Inf", sprintf("%- 4f", -inf))
-    assert_equal("-Inf", sprintf("%+ 4f", -inf))
-
-    assert_equal("-Inf", sprintf("% 04f", -inf))
-    assert_equal("-Inf", sprintf("%- 04f", -inf))
-    assert_equal("-Inf", sprintf("%+ 04f", -inf))
 
     assert_equal("    -Inf", sprintf("%8f", -inf))
     assert_equal("-Inf    ", sprintf("%-8f", -inf))

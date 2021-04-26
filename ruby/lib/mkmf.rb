@@ -2306,7 +2306,7 @@ CLEANOBJS     = *.#{$OBJEXT} #{config_string('cleanobjs') {|t| t.gsub(/\$\*/, "$
     mfile.puts(conf)
     mfile.print "
 all:    #{$extout ? "install" : target ? "$(DLLIB)" : "Makefile"}
-static: #{$extmk && !$static ? "all" : "$(STATIC_LIB)#{$extout ? " install-rb" : ""}"}
+static: #{$extmk && !$static ? "all" : "$(STATIC_LIB)#{!$extmk ? " install-rb" : ""}"}
 .PHONY: all install static install-so install-rb
 .PHONY: clean clean-so clean-static clean-rb
 " #"
@@ -2675,17 +2675,17 @@ MESSAGE
 
   TRY_LINK = config_string('TRY_LINK') ||
     "$(CC) #{OUTFLAG}#{CONFTEST}#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
-    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS)"
+    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS) $(LDFLAGS)"
 
   ##
   # Command which will link a shared library
 
   LINK_SO = (config_string('LINK_SO') || "").sub(/^$/) do
     if CONFIG["DLEXT"] == $OBJEXT
-      "ld $(DLDFLAGS) -r -o $@ $(OBJS)\n"
+      "ld $(DLDFLAGS) -r -o $@ $(OBJS) $(DLDFLAGS)\n"
     else
       "$(LDSHARED) #{OUTFLAG}$@ $(OBJS) " \
-      "$(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS)"
+      "$(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS) $(DLDFLAGS)"
     end
   end
 

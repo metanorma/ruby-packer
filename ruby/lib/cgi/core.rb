@@ -4,13 +4,6 @@
 # generating HTTP responses.
 #++
 class CGI
-  unless const_defined?(:Util)
-    module Util
-      @@accept_charset = "UTF-8" # :nodoc:
-    end
-    include Util
-    extend Util
-  end
 
   $CGI_ENV = ENV    # for FCGI support
 
@@ -23,7 +16,7 @@ class CGI
   # Standard internet newline sequence
   EOL = CR + LF
 
-  REVISION = '$Id$' #:nodoc:
+  REVISION = '$Id: core.rb 53141 2015-12-16 05:07:31Z naruse $' #:nodoc:
 
   # Whether processing will be required in binary vs text
   NEEDS_BINMODE = File::BINARY != 0
@@ -741,7 +734,7 @@ class CGI
   #
   #   CGI.accept_charset = "EUC-JP"
   #
-  @@accept_charset="UTF-8" if false # needed for rdoc?
+  @@accept_charset="UTF-8"
 
   # Return the accept character set for all new CGI instances.
   def self.accept_charset

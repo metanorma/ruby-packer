@@ -16,7 +16,7 @@
 # NOTE: You can find Japanese version of this document at:
 # http://docs.ruby-lang.org/ja/latest/library/net=2fpop.html
 #
-#   $Id$
+#   $Id: pop.rb 56865 2016-11-21 23:05:41Z normal $
 #
 # See Net::POP3 for documentation.
 #
@@ -196,7 +196,7 @@ module Net
   class POP3 < Protocol
 
     # svn revision of this library
-    Revision = %q$Revision$.split[1]
+    Revision = %q$Revision: 56865 $.split[1]
 
     #
     # Class Parameters

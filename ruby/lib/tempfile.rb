@@ -2,7 +2,7 @@
 #
 # tempfile - manipulates temporary files
 #
-# $Id$
+# $Id: tempfile.rb 58013 2017-03-18 12:02:27Z naruse $
 #
 
 require 'delegate'

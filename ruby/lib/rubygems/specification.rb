@@ -108,8 +108,6 @@ class Gem::Specification < Gem::BasicSpecification
 
   private_constant :LOAD_CACHE if defined? private_constant
 
-  VALID_NAME_PATTERN = /\A[a-zA-Z0-9\.\-\_]+\z/ # :nodoc:
-
   # :startdoc:
 
   ##
@@ -2107,7 +2105,7 @@ class Gem::Specification < Gem::BasicSpecification
     if $DEBUG
       super
     else
-      "#{super[0..-2]} #{full_name}>"
+      "#<#{self.class}:0x#{__id__.to_s(16)} #{full_name}>"
     end
   end
 
@@ -2673,15 +2671,9 @@ class Gem::Specification < Gem::BasicSpecification
       end
     end
 
-    if !name.is_a?(String) then
+    unless String === name then
       raise Gem::InvalidSpecificationException,
-            "invalid value for attribute name: \"#{name.inspect}\" must be a string"
-    elsif name !~ /[a-zA-Z]/ then
-      raise Gem::InvalidSpecificationException,
-            "invalid value for attribute name: #{name.dump} must include at least one letter"
-    elsif name !~ VALID_NAME_PATTERN then
-      raise Gem::InvalidSpecificationException,
-            "invalid value for attribute name: #{name.dump} can only include letters, numbers, dashes, and underscores"
+            "invalid value for attribute name: \"#{name.inspect}\""
     end
 
     if raw_require_paths.empty? then

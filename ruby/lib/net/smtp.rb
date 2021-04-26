@@ -12,7 +12,7 @@
 # This program is free software. You can re-distribute and/or
 # modify this program under the same terms as Ruby itself.
 #
-# $Id$
+# $Id: smtp.rb 56865 2016-11-21 23:05:41Z normal $
 #
 # See Net::SMTP for documentation.
 #
@@ -169,7 +169,7 @@ module Net
   #
   class SMTP < Protocol
 
-    Revision = %q$Revision$.split[1]
+    Revision = %q$Revision: 56865 $.split[1]
 
     # The default SMTP port number, 25.
     def SMTP.default_port

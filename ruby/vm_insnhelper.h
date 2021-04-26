@@ -2,7 +2,7 @@
 
   insnhelper.h - helper macros to implement each instructions
 
-  $Author$
+  $Author: ko1 $
   created at: 04/01/01 15:50:34 JST
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -194,31 +194,6 @@ THROW_DATA_NEW(VALUE val, const rb_control_frame_t *cf, VALUE st)
     return (struct vm_throw_data *)rb_imemo_new(imemo_throw_data, val, (VALUE)cf, st, 0);
 }
 
-static inline VALUE
-THROW_DATA_VAL(const struct vm_throw_data *obj)
-{
-    return obj->throw_obj;
-}
-
-static inline const rb_control_frame_t *
-THROW_DATA_CATCH_FRAME(const struct vm_throw_data *obj)
-{
-    return obj->catch_frame;
-}
-
-static inline int
-THROW_DATA_STATE(const struct vm_throw_data *obj)
-{
-    return (int)obj->throw_state;
-}
-
-static inline int
-THROW_DATA_CONSUMED_P(const struct vm_throw_data *obj)
-{
-    VM_ASSERT(THROW_DATA_P(obj));
-    return obj->flags & THROW_DATA_CONSUMED;
-}
-
 static inline void
 THROW_DATA_CATCH_FRAME_SET(struct vm_throw_data *obj, const rb_control_frame_t *cfp)
 {
@@ -231,13 +206,22 @@ THROW_DATA_STATE_SET(struct vm_throw_data *obj, int st)
     obj->throw_state = (VALUE)st;
 }
 
-static inline void
-THROW_DATA_CONSUMED_SET(struct vm_throw_data *obj)
+static inline VALUE
+THROW_DATA_VAL(const struct vm_throw_data *obj)
 {
-    if (THROW_DATA_P(obj) &&
-	THROW_DATA_STATE(obj) == TAG_BREAK) {
-	obj->flags |= THROW_DATA_CONSUMED;
-    }
+    return obj->throw_obj;
+}
+
+static inline const rb_control_frame_t *
+THROW_DATA_CATCH_FRAME(const struct vm_throw_data *obj)
+{
+    return obj->catch_frame;
+}
+
+static int
+THROW_DATA_STATE(const struct vm_throw_data *obj)
+{
+    return (int)obj->throw_state;
 }
 
 #endif /* RUBY_INSNHELPER_H */

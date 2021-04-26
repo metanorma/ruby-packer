@@ -2,7 +2,7 @@
 
   file.c -
 
-  $Author$
+  $Author: nobu $
   created at: Mon Nov 15 12:24:34 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -95,6 +95,10 @@ int flock(int, int);
 #if !defined HAVE_LSTAT && !defined lstat
 #define lstat stat
 #endif
+
+// --------- [Enclose.io Hack start] ---------
+#include "enclose_io.h"
+// --------- [Enclose.io Hack end] ---------
 
 /* define system APIs */
 #ifdef _WIN32

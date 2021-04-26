@@ -2,7 +2,7 @@
 #
 #   change-ws.rb -
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 56371 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

@@ -86,7 +86,7 @@ is too hard to use.
       name = Array(options[:name])
     else
       args = options[:args].to_a
-      name = options[:exact] ? args.map{|arg| /\A#{Regexp.escape(arg)}\Z/ } : args.map{|arg| /#{arg}/i }
+      name = options[:exact] ? args : args.map{|arg| /#{arg}/i }
     end
 
     prerelease = options[:prerelease]
@@ -226,7 +226,7 @@ is too hard to use.
         end
       end
 
-      output << clean_text(make_entry(matching_tuples, platforms))
+      output << make_entry(matching_tuples, platforms)
     end
   end
 
@@ -353,8 +353,7 @@ is too hard to use.
   end
 
   def spec_summary entry, spec
-    summary = truncate_text(spec.summary, "the summary for #{spec.full_name}")
-    entry << "\n\n" << format_text(summary, 68, 4)
+    entry << "\n\n" << format_text(spec.summary, 68, 4)
   end
 
 end

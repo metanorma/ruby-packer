@@ -72,7 +72,7 @@ class Gem::Commands::OpenCommand < Gem::Command
   end
 
   def spec_for name
-    spec = Gem::Specification.find_all_by_name(name, @version).first
+    spec = Gem::Specification.find_all_by_name(name, @version).last
 
     return spec if spec
 

@@ -3,7 +3,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id$
+# Revision:: $Id: mailto.rb 57066 2016-12-12 15:24:28Z naruse $
 #
 # See URI for general documentation
 #

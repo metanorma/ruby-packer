@@ -2022,14 +2022,9 @@ static VALUE
 float_numerator(VALUE self)
 {
     double d = RFLOAT_VALUE(self);
-    VALUE r;
     if (isinf(d) || isnan(d))
 	return self;
-    r = float_to_r(self);
-    if (canonicalization && k_integer_p(r)) {
-	return r;
-    }
-    return nurat_numerator(r);
+    return nurat_numerator(float_to_r(self));
 }
 
 /*
@@ -2045,14 +2040,9 @@ static VALUE
 float_denominator(VALUE self)
 {
     double d = RFLOAT_VALUE(self);
-    VALUE r;
     if (isinf(d) || isnan(d))
 	return INT2FIX(1);
-    r = float_to_r(self);
-    if (canonicalization && k_integer_p(r)) {
-	return ONE;
-    }
-    return nurat_denominator(r);
+    return nurat_denominator(float_to_r(self));
 }
 
 /*
