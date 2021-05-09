@@ -1545,9 +1545,13 @@ is_case_sensitive(DIR *dirp, const char *path)
     const uint32_t mask = VOL_CAP_FMT_CASE_SENSITIVE;
 
 #   if defined HAVE_FGETATTRLIST
+    if (squash_find_entry(dirp)) { return 1; }
+
     if (fgetattrlist(dirfd(dirp), &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW))
 	return -1;
 #   else
+    if (enclose_io_is_path(path)) { return 1; }
+
     if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW))
 	return -1;
 #   endif
