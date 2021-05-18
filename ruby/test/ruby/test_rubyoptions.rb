@@ -184,6 +184,8 @@ class TestRubyOptions < Test::Unit::TestCase
     assert_in_out_err(%w(-0141 -e) + ["print gets"], "foo\nbar\0baz", %w(foo ba), [])
 
     assert_in_out_err(%w(-0e) + ["print gets"], "foo\nbar\0baz", %W(foo bar\0), [])
+
+    assert_in_out_err(%w(-00 -e) + ["p gets, gets"], "foo\nbar\n\n\n\nbaz\n", %w("foo\nbar\n\n" "baz\n"), [])
   end
 
   def test_autosplit
@@ -440,6 +442,17 @@ class TestRubyOptions < Test::Unit::TestCase
             t.puts src[1]
             t.flush
             assert_in_out_err(["-w", t.path], "", [], [], '[ruby-core:25442]')
+          end
+
+          a.for("BOM with #{b}") do
+            err = ["#{t.path}:2: warning: mismatched indentations at '#{e}' with '#{k}' at 1"]
+            t.rewind
+            t.truncate(0)
+            t.print "\u{feff}"
+            t.puts src
+            t.flush
+            assert_in_out_err(["-w", t.path], "", [], err)
+            assert_in_out_err(["-wr", t.path, "-e", ""], "", [], err)
           end
         end
       end

@@ -1015,9 +1015,17 @@ VALUE rb_check_backtrace(VALUE);
 NORETURN(void rb_async_bug_errno(const char *,int));
 const char *rb_builtin_type_name(int t);
 const char *rb_builtin_class_name(VALUE x);
+PRINTF_ARGS(void rb_sys_warn(const char *fmt, ...), 1, 2);
+PRINTF_ARGS(void rb_syserr_warn(int err, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_enc_warn(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_sys_enc_warn(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_syserr_enc_warn(int err, rb_encoding *enc, const char *fmt, ...), 3, 4);
+PRINTF_ARGS(void rb_sys_warning(const char *fmt, ...), 1, 2);
+PRINTF_ARGS(void rb_syserr_warning(int err, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_enc_warning(rb_encoding *enc, const char *fmt, ...), 2, 3);
 PRINTF_ARGS(void rb_sys_enc_warning(rb_encoding *enc, const char *fmt, ...), 2, 3);
+PRINTF_ARGS(void rb_syserr_enc_warning(int err, rb_encoding *enc, const char *fmt, ...), 3, 4);
+
 VALUE rb_name_err_new(VALUE mesg, VALUE recv, VALUE method);
 #define rb_name_err_raise_str(mesg, recv, name) \
     rb_exc_raise(rb_name_err_new(mesg, recv, name))
@@ -1025,6 +1033,8 @@ VALUE rb_name_err_new(VALUE mesg, VALUE recv, VALUE method);
     rb_name_err_raise_str(rb_fstring_cstr(mesg), (recv), (name))
 NORETURN(void ruby_only_for_internal_use(const char *));
 #define ONLY_FOR_INTERNAL_USE(func) ruby_only_for_internal_use(func)
+VALUE rb_warning_warn(VALUE mod, VALUE str);
+VALUE rb_warning_string(const char *fmt, ...);
 
 /* eval.c */
 VALUE rb_refinement_module_get_refined_class(VALUE module);
@@ -1041,6 +1051,7 @@ void rb_mark_end_proc(void);
 VALUE rb_home_dir_of(VALUE user, VALUE result);
 VALUE rb_default_home_dir(VALUE result);
 VALUE rb_realpath_internal(VALUE basedir, VALUE path, int strict);
+VALUE rb_check_realpath(VALUE basedir, VALUE path);
 void rb_file_const(const char*, VALUE);
 int rb_file_load_ok(const char *);
 VALUE rb_file_expand_path_fast(VALUE, VALUE);
@@ -1633,7 +1644,7 @@ void rb_backtrace_print_as_bugreport(void);
 int rb_backtrace_p(VALUE obj);
 VALUE rb_backtrace_to_str_ary(VALUE obj);
 VALUE rb_backtrace_to_location_ary(VALUE obj);
-void rb_backtrace_print_to(VALUE output);
+void rb_backtrace_each(VALUE (*iter)(VALUE recv, VALUE str), VALUE output);
 VALUE rb_vm_backtrace_object(void);
 
 RUBY_SYMBOL_EXPORT_BEGIN
