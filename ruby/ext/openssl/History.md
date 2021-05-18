@@ -1,3 +1,38 @@
+Version 2.0.7
+=============
+
+Bug fixes
+---------
+
+* OpenSSL::Cipher#auth_data= could segfault if called against a non-AEAD cipher.
+  [[Bug #14024]](https://bugs.ruby-lang.org/issues/14024)
+* OpenSSL::X509::Certificate#public_key= (and similar methods) could segfault
+  when an instance of OpenSSL::PKey::PKey with no public key components is
+  passed.
+  [[Bug #14087]](https://bugs.ruby-lang.org/issues/14087)
+  [[GitHub #168]](https://github.com/ruby/openssl/pull/168)
+
+
+Version 2.0.6
+=============
+
+Bug fixes
+---------
+
+* The session_remove_cb set to an OpenSSL::SSL::SSLContext is no longer called
+  during GC.
+* A possible deadlock in OpenSSL::SSL::SSLSocket#sysread is fixed.
+  [[GitHub #139]](https://github.com/ruby/openssl/pull/139)
+* OpenSSL::BN#hash could return an unnormalized fixnum value on Windows.
+  [[Bug #13877]](https://bugs.ruby-lang.org/issues/13877)
+* OpenSSL::SSL::SSLSocket#sysread and #sysread_nonblock set the length of the
+  destination buffer String to 0 on error.
+  [[GitHub #153]](https://github.com/ruby/openssl/pull/153)
+* Possible deadlock is fixed. This happened only when built with older versions
+  of OpenSSL (before 1.1.0) or LibreSSL.
+  [[GitHub #155]](https://github.com/ruby/openssl/pull/155)
+
+
 Version 2.0.5
 =============
 
@@ -150,7 +185,7 @@ Notable changes
   - A new option 'verify_hostname' is added to OpenSSL::SSL::SSLContext. When it
     is enabled, and the SNI hostname is also set, the hostname verification on
     the server certificate is automatically performed. It is now enabled by
-    OpenSSL::SSL::Context#set_params.
+    OpenSSL::SSL::SSLContext#set_params.
     [[GH ruby/openssl#60]](https://github.com/ruby/openssl/pull/60)
 
 Removals

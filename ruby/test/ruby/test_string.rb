@@ -1479,6 +1479,11 @@ CODE
     }
   end
 
+  def test_split_dupped
+    s = "abc"
+    s.split("b", 1).map(&:upcase!)
+    assert_equal("abc", s)
+  end
   def test_squeeze
     assert_equal(S("abc"), S("aaabbbbccc").squeeze)
     assert_equal(S("aa bb cc"), S("aa   bb      cc").squeeze(S(" ")))
@@ -1660,6 +1665,11 @@ CODE
 
     assert_equal("!", " ".succ)
     assert_equal("", "".succ)
+
+    bug = '[ruby-core:83062] [Bug #13952]'
+    s = "\xff".b
+    assert_not_predicate(s, :ascii_only?)
+    assert_predicate(s.succ, :ascii_only?, bug)
   end
 
   def test_succ!
@@ -1851,8 +1861,13 @@ CODE
     assert_equal(false, "\u3041\u3042".tr("\u3041", "a").ascii_only?)
 
     bug6156 = '[ruby-core:43335]'
+    bug13950 = '[ruby-core:83056] [Bug #13950]'
     str, range, star = %w[b a-z *].map{|s|s.encode("utf-16le")}
-    assert_equal(star, str.tr(range, star), bug6156)
+    result = str.tr(range, star)
+    assert_equal(star, result, bug6156)
+    assert_not_predicate(str, :ascii_only?)
+    assert_not_predicate(star, :ascii_only?)
+    assert_not_predicate(result, :ascii_only?, bug13950)
   end
 
   def test_tr!
@@ -2213,7 +2228,12 @@ CODE
     end
 
     assert_equal(["\u30E6\u30FC\u30B6", "@", "\u30C9\u30E1.\u30A4\u30F3"],
-      "\u30E6\u30FC\u30B6@\u30C9\u30E1.\u30A4\u30F3".partition(/[@.]/))
+                 "\u30E6\u30FC\u30B6@\u30C9\u30E1.\u30A4\u30F3".partition(/[@.]/))
+
+    bug = '[ruby-core:82911]'
+    hello = "hello"
+    hello.partition("hi").map(&:upcase!)
+    assert_equal("hello", hello, bug)
   end
 
   def test_rpartition
@@ -2233,6 +2253,11 @@ CODE
     bug8138 = '[ruby-dev:47183]'
     assert_equal(["\u30E6\u30FC\u30B6@\u30C9\u30E1", ".", "\u30A4\u30F3"],
       "\u30E6\u30FC\u30B6@\u30C9\u30E1.\u30A4\u30F3".rpartition(/[@.]/), bug8138)
+
+    bug = '[ruby-core:82911]'
+    hello = "hello"
+    hello.rpartition("hi").map(&:upcase!)
+    assert_equal("hello", hello, bug)
   end
 
   def test_setter
@@ -2543,6 +2568,12 @@ CODE
     assert_equal("a", "a".chr)
     assert_equal("\u3042", "\u3042\u3043".chr)
     assert_equal('', ''.chr)
+  end
+
+  def test_substr_code_range
+    data = "\xff" + "a"*200
+    assert_not_predicate(data, :valid_encoding?)
+    assert_predicate(data[100..-1], :valid_encoding?)
   end
 end
 

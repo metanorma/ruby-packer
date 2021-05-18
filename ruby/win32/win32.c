@@ -1597,7 +1597,7 @@ cmdglob(NtCmdLineElement *patt, NtCmdLineElement **tail, UINT cp, rb_encoding *e
     if (patt->len >= PATH_MAX)
 	if (!(buf = malloc(patt->len + 1))) return 0;
 
-    strlcpy(buf, patt->str, patt->len + 1);
+    memcpy(buf, patt->str, patt->len);
     buf[patt->len] = '\0';
     translate_char(buf, '\\', '/', cp);
     status = ruby_brace_glob_with_enc(buf, 0, insert, (VALUE)&tail, enc);
@@ -1898,7 +1898,8 @@ w32_cmdvector(const WCHAR *cmd, char ***vec, UINT cp, rb_encoding *enc)
     cptr = buffer + (elements+1) * sizeof(char *);
 
     while ((curr = cmdhead) != 0) {
-	strlcpy(cptr, curr->str, curr->len + 1);
+	memcpy(cptr, curr->str, curr->len);
+	cptr[curr->len] = '\0';
 	*vptr++ = cptr;
 	cptr += curr->len + 1;
 	cmdhead = curr->next;
@@ -4993,7 +4994,7 @@ rb_w32_read_reparse_point(const WCHAR *path, rb_w32_reparse_buffer_t *rp,
 	    ret = rp->SymbolicLinkReparseBuffer.PrintNameLength;
 	    *len = ret / sizeof(WCHAR);
 	}
-	else { /* IO_REPARSE_TAG_MOUNT_POINT */
+	else if (rp->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
 	    static const WCHAR *volume = L"Volume{";
 	    enum {volume_prefix_len = rb_strlen_lit("\\??\\")};
 	    name = ((char *)rp->MountPointReparseBuffer.PathBuffer +
@@ -5005,6 +5006,9 @@ rb_w32_read_reparse_point(const WCHAR *path, rb_w32_reparse_buffer_t *rp,
 	    if (ret > sizeof(volume) - 1 * sizeof(WCHAR) &&
 		memcmp(name, volume, sizeof(volume) - 1 * sizeof(WCHAR)) == 0)
 		return -1;
+	}
+	else {
+	    return -1;
 	}
 	*result = name;
 	if (e) {

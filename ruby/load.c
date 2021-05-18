@@ -85,7 +85,8 @@ rb_construct_expanded_load_path(enum expand_type type, int *has_relative, int *h
 	if (is_string)
 	    rb_str_freeze(path);
 	as_str = rb_get_path_check_convert(path, as_str, level);
-	expanded_path = rb_file_expand_path_fast(as_str, Qnil);
+	expanded_path = rb_check_realpath(Qnil, as_str);
+	if (NIL_P(expanded_path)) expanded_path = as_str;
 	rb_str_freeze(expanded_path);
 	rb_ary_push(ary, rb_fstring(expanded_path));
     }
@@ -626,6 +627,8 @@ rb_load_internal0(rb_thread_t *th, VALUE fname, int wrap)
     th->top_wrapper = wrapper;
 
     if (state) {
+	/* usually state == TAG_RAISE only, except for
+	 * rb_iseq_load_iseq case */
 	VALUE exc = rb_vm_make_jump_tag_but_local_jump(state, Qundef);
 	if (NIL_P(exc)) return state;
 	th->errinfo = exc;
@@ -718,6 +721,8 @@ rb_f_load(int argc, VALUE *argv)
     return Qtrue;
 }
 
+extern VALUE rb_mWarning;
+
 static char *
 load_lock(const char *ftptr)
 {
@@ -740,8 +745,9 @@ load_lock(const char *ftptr)
 	return (char *)"";
     }
     if (RTEST(ruby_verbose)) {
-	rb_warning("loading in progress, circular require considered harmful - %s", ftptr);
-	rb_backtrace_print_to(rb_stderr);
+	VALUE warning = rb_warning_string("loading in progress, circular require considered harmful - %s", ftptr);
+	rb_backtrace_each(rb_str_append, warning);
+	rb_warning_warn(rb_mWarning, warning);
     }
     switch (rb_thread_shield_wait((VALUE)data)) {
       case Qfalse:

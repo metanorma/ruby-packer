@@ -2451,6 +2451,7 @@ str_substr(VALUE str, long beg, long len, int empty)
 	str2 = str_new_shared(rb_obj_class(str2), str2);
 	RSTRING(str2)->as.heap.ptr += ofs;
 	RSTRING(str2)->as.heap.len = len;
+	ENC_CODERANGE_CLEAR(str2);
     }
     else {
 	if (!len && !empty) return Qnil;
@@ -3969,6 +3970,7 @@ str_succ(VALUE str)
             }
             carry_pos = s - sbeg;
 	}
+	ENC_CODERANGE_SET(str, ENC_CODERANGE_UNKNOWN);
     }
     RESIZE_CAPA(str, slen + carry_len);
     sbeg = RSTRING_PTR(str);
@@ -6520,7 +6522,7 @@ tr_trans(VALUE str, VALUE src, VALUE repl, int sflag)
 	}
     }
 
-    if (cr == ENC_CODERANGE_VALID)
+    if (cr == ENC_CODERANGE_VALID && rb_enc_asciicompat(e1))
 	cr = ENC_CODERANGE_7BIT;
     str_modify_keep_cr(str);
     s = RSTRING_PTR(str); send = RSTRING_END(str);
@@ -7254,7 +7256,7 @@ rb_str_split_m(int argc, VALUE *argv, VALUE str)
 	else if (lim == 1) {
 	    if (RSTRING_LEN(str) == 0)
 		return rb_ary_new2(0);
-	    return rb_ary_new3(1, str);
+	    return rb_ary_new3(1, rb_str_dup(str));
 	}
 	i = 1;
     }
@@ -8927,7 +8929,7 @@ rb_str_partition(VALUE str, VALUE sep)
 	pos = rb_reg_search(sep, str, 0, 0);
 	if (pos < 0) {
 	  failed:
-	    return rb_ary_new3(3, str, str_new_empty(str), str_new_empty(str));
+	    return rb_ary_new3(3, rb_str_dup(str), str_new_empty(str), str_new_empty(str));
 	}
 	sep = rb_str_subpat(str, sep, INT2FIX(0));
 	if (pos == 0 && RSTRING_LEN(sep) == 0) goto failed;
@@ -8980,7 +8982,7 @@ rb_str_rpartition(VALUE str, VALUE sep)
 	pos = rb_str_rindex(str, sep, pos);
     }
     if (pos < 0) {
-	return rb_ary_new3(3, str_new_empty(str), str_new_empty(str), str);
+       return rb_ary_new3(3, str_new_empty(str), str_new_empty(str), rb_str_dup(str));
     }
     if (regex) {
 	sep = rb_reg_nth_match(0, rb_backref_get());
@@ -9686,6 +9688,7 @@ sym_inspect(VALUE sym)
  *  Returns the name or string corresponding to <i>sym</i>.
  *
  *     :fred.id2name   #=> "fred"
+ *     :ginger.to_s    #=> "ginger"
  */
 
 

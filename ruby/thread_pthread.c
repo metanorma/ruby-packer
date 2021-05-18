@@ -841,8 +841,9 @@ native_thread_init_stack(rb_thread_t *th)
 	size_t size;
 
 	if (get_stack(&start, &size) == 0) {
-	    th->machine.stack_start = start;
-	    th->machine.stack_maxsize = size;
+	    uintptr_t diff = (uintptr_t)start - (uintptr_t)&curr;
+	    th->machine.stack_start = (VALUE *)&curr;
+	    th->machine.stack_maxsize = size - diff;
 	}
 #elif defined get_stack_of
 	if (!th->machine.stack_maxsize) {
@@ -1318,17 +1319,21 @@ void
 rb_thread_wakeup_timer_thread(void)
 {
     /* must be safe inside sighandler, so no mutex */
-    ATOMIC_INC(timer_thread_pipe.writing);
-    rb_thread_wakeup_timer_thread_fd(&timer_thread_pipe.normal[1]);
-    ATOMIC_DEC(timer_thread_pipe.writing);
+    if (timer_thread_pipe.owner_process == getpid()) {
+	ATOMIC_INC(timer_thread_pipe.writing);
+	rb_thread_wakeup_timer_thread_fd(&timer_thread_pipe.normal[1]);
+	ATOMIC_DEC(timer_thread_pipe.writing);
+    }
 }
 
 static void
 rb_thread_wakeup_timer_thread_low(void)
 {
-    ATOMIC_INC(timer_thread_pipe.writing);
-    rb_thread_wakeup_timer_thread_fd(&timer_thread_pipe.low[1]);
-    ATOMIC_DEC(timer_thread_pipe.writing);
+    if (timer_thread_pipe.owner_process == getpid()) {
+	ATOMIC_INC(timer_thread_pipe.writing);
+	rb_thread_wakeup_timer_thread_fd(&timer_thread_pipe.low[1]);
+	ATOMIC_DEC(timer_thread_pipe.writing);
+    }
 }
 
 /* VM-dependent API is not available for this function */

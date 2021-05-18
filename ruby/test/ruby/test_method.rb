@@ -873,6 +873,16 @@ class TestMethod < Test::Unit::TestCase
     m = m.super_method
     assert_equal(c1, m.owner, Feature9781)
     assert_same(o, m.receiver, Feature9781)
+
+    c1 = Class.new {def foo; end}
+    c2 = Class.new(c1) {include m1; include m2}
+    m = c2.instance_method(:foo)
+    assert_equal(m2, m.owner)
+    m = m.super_method
+    assert_equal(m1, m.owner)
+    m = m.super_method
+    assert_equal(c1, m.owner)
+    assert_nil(m.super_method)
   end
 
   def test_super_method_removed
@@ -911,6 +921,11 @@ class TestMethod < Test::Unit::TestCase
     assert_equal(m1, m2, bug)
     assert_equal(c1, m2.owner, bug)
     assert_equal(m1.source_location, m2.source_location, bug)
+  end
+
+  def test_super_method_after_bind
+    assert_nil String.instance_method(:length).bind(String.new).super_method,
+      '[ruby-core:85231] [Bug #14421]'
   end
 
   def rest_parameter(*rest)
