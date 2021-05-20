@@ -318,6 +318,7 @@ class Compiler
         Dir['**/*.m4'].each do |x|
           File.utime(Time.at(0), Time.at(0), x)
         end
+        FileUtils.touch('ruby/tool/generic_erb.rb')
       end
       # PATCH common.mk
       target = File.join(@options[:tmpdir], @ruby_dir, 'common.mk')
