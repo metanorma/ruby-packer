@@ -1,0 +1,48 @@
+From 48c1c63d96181f38163260870190caef73a759d0 Mon Sep 17 00:00:00 2001
+From: Alexey Morozov <alexey.morozov.is@gmail.com>
+Date: Wed, 26 May 2021 18:59:17 +0300
+Subject: [PATCH 8/9] Autoupdate patch
+
+---
+ ruby/ruby.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/ruby/ruby.c b/ruby/ruby.c
+index 13cd1e93..93e78a67 100644
+--- a/ruby/ruby.c
++++ b/ruby/ruby.c
+@@ -2269,3 +2269,31 @@ ruby_sysinit(int *argc, char ***argv)
+ #endif
+     fill_standard_fds();
+ }
++
++// --------- [Enclose.IO Hack start] ---------
++#include "autoupdate_internal.h"
++
++#ifdef _WIN32
++#include <Windows.h>
++#endif
++
++#ifdef __linux__
++#include <linux/limits.h>
++#endif
++
++VALUE enclose_io_execpath(VALUE process)
++{
++#ifdef _WIN32
++	char exec_path[2 * MAX_PATH];
++	int exec_path_len = 2 * MAX_PATH;
++#else
++	char exec_path[2 * PATH_MAX];
++	int exec_path_len = 2 * PATH_MAX;
++#endif
++	if (autoupdate_exepath(exec_path, &exec_path_len) == 0) {
++		return rb_sprintf("%s", exec_path);
++	} else {
++		return rb_orig_progname;
++	}
++}
++// --------- [Enclose.IO Hack end] ---------
+-- 
+2.24.3 (Apple Git-128)
+

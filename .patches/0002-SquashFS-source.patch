@@ -1,0 +1,5215 @@
+From 1c3272508c44bf33853aec8d617011d8174cf672 Mon Sep 17 00:00:00 2001
+From: Alexey Morozov <alexey.morozov.is@gmail.com>
+Date: Wed, 26 May 2021 18:44:59 +0300
+Subject: [PATCH 2/9] SquashFS source
+
+---
+ ruby/common.mk                    |  20 ++
+ ruby/include/squash.h             | 244 +++++++++++++++
+ ruby/include/squash/cache.h       |  68 +++++
+ ruby/include/squash/common.h      |  80 +++++
+ ruby/include/squash/decompress.h  |  42 +++
+ ruby/include/squash/dir.h         |  94 ++++++
+ ruby/include/squash/dirent.h      |  36 +++
+ ruby/include/squash/fdtable.h     |  31 ++
+ ruby/include/squash/file.h        |  78 +++++
+ ruby/include/squash/fs.h          | 132 ++++++++
+ ruby/include/squash/hash.h        |  63 ++++
+ ruby/include/squash/mutex.h       |  32 ++
+ ruby/include/squash/nonstd.h      |  34 +++
+ ruby/include/squash/private.h     |  35 +++
+ ruby/include/squash/squashfs_fs.h | 318 +++++++++++++++++++
+ ruby/include/squash/stack.h       |  54 ++++
+ ruby/include/squash/table.h       |  41 +++
+ ruby/include/squash/traverse.h    |  69 +++++
+ ruby/include/squash/util.h        |  41 +++
+ ruby/include/squash/windows.h     | 107 +++++++
+ ruby/squash_cache.c               |  99 ++++++
+ ruby/squash_decompress.c          |  44 +++
+ ruby/squash_dir.c                 | 486 ++++++++++++++++++++++++++++++
+ ruby/squash_dirent.c              | 215 +++++++++++++
+ ruby/squash_extract.c             | 265 ++++++++++++++++
+ ruby/squash_fd.c                  | 233 ++++++++++++++
+ ruby/squash_file.c                | 329 ++++++++++++++++++++
+ ruby/squash_fs.c                  | 434 ++++++++++++++++++++++++++
+ ruby/squash_hash.c                | 131 ++++++++
+ ruby/squash_mutex.c               |  49 +++
+ ruby/squash_nonstd-makedev.c      |  35 +++
+ ruby/squash_nonstd-stat.c         |  58 ++++
+ ruby/squash_private.c             |  47 +++
+ ruby/squash_readlink.c            |  85 ++++++
+ ruby/squash_scandir.c             |  66 ++++
+ ruby/squash_stack.c               | 130 ++++++++
+ ruby/squash_stat.c                |  82 +++++
+ ruby/squash_table.c               |  66 ++++
+ ruby/squash_traverse.c            | 322 ++++++++++++++++++++
+ ruby/squash_util.c                |  84 ++++++
+ 40 files changed, 4879 insertions(+)
+ create mode 100644 ruby/include/squash.h
+ create mode 100644 ruby/include/squash/cache.h
+ create mode 100644 ruby/include/squash/common.h
+ create mode 100644 ruby/include/squash/decompress.h
+ create mode 100644 ruby/include/squash/dir.h
+ create mode 100644 ruby/include/squash/dirent.h
+ create mode 100644 ruby/include/squash/fdtable.h
+ create mode 100644 ruby/include/squash/file.h
+ create mode 100644 ruby/include/squash/fs.h
+ create mode 100644 ruby/include/squash/hash.h
+ create mode 100644 ruby/include/squash/mutex.h
+ create mode 100644 ruby/include/squash/nonstd.h
+ create mode 100644 ruby/include/squash/private.h
+ create mode 100644 ruby/include/squash/squashfs_fs.h
+ create mode 100644 ruby/include/squash/stack.h
+ create mode 100644 ruby/include/squash/table.h
+ create mode 100644 ruby/include/squash/traverse.h
+ create mode 100644 ruby/include/squash/util.h
+ create mode 100644 ruby/include/squash/windows.h
+ create mode 100644 ruby/squash_cache.c
+ create mode 100644 ruby/squash_decompress.c
+ create mode 100644 ruby/squash_dir.c
+ create mode 100644 ruby/squash_dirent.c
+ create mode 100644 ruby/squash_extract.c
+ create mode 100644 ruby/squash_fd.c
+ create mode 100644 ruby/squash_file.c
+ create mode 100644 ruby/squash_fs.c
+ create mode 100644 ruby/squash_hash.c
+ create mode 100644 ruby/squash_mutex.c
+ create mode 100644 ruby/squash_nonstd-makedev.c
+ create mode 100644 ruby/squash_nonstd-stat.c
+ create mode 100644 ruby/squash_private.c
+ create mode 100644 ruby/squash_readlink.c
+ create mode 100644 ruby/squash_scandir.c
+ create mode 100644 ruby/squash_stack.c
+ create mode 100644 ruby/squash_stat.c
+ create mode 100644 ruby/squash_table.c
+ create mode 100644 ruby/squash_traverse.c
+ create mode 100644 ruby/squash_util.c
+
+diff --git a/ruby/common.mk b/ruby/common.mk
+index c00e674f..7bbe8f5f 100644
+--- a/ruby/common.mk
++++ b/ruby/common.mk
+@@ -73,6 +73,26 @@ COMMONOBJS    = autoupdate_autoupdate.$(OBJEXT) \
+ 		autoupdate_inflate.$(OBJEXT) \
+ 		autoupdate_tmpf.$(OBJEXT) \
+ 		autoupdate_utils.$(OBJEXT) \
++		squash_cache.$(OBJEXT) \
++		squash_decompress.$(OBJEXT) \
++		squash_dir.$(OBJEXT) \
++		squash_dirent.$(OBJEXT) \
++		squash_extract.$(OBJEXT) \
++		squash_fd.$(OBJEXT) \
++		squash_file.$(OBJEXT) \
++		squash_fs.$(OBJEXT) \
++		squash_hash.$(OBJEXT) \
++		squash_mutex.$(OBJEXT) \
++		squash_nonstd-makedev.$(OBJEXT) \
++		squash_nonstd-stat.$(OBJEXT) \
++		squash_private.$(OBJEXT) \
++		squash_readlink.$(OBJEXT) \
++		squash_scandir.$(OBJEXT) \
++		squash_stack.$(OBJEXT) \
++		squash_stat.$(OBJEXT) \
++		squash_table.$(OBJEXT) \
++		squash_traverse.$(OBJEXT) \
++		squash_util.$(OBJEXT) \
+ 		array.$(OBJEXT) \
+ 		bignum.$(OBJEXT) \
+ 		class.$(OBJEXT) \
+diff --git a/ruby/include/squash.h b/ruby/include/squash.h
+new file mode 100644
+index 00000000..fceea2e0
+--- /dev/null
++++ b/ruby/include/squash.h
+@@ -0,0 +1,244 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ *
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef SQFS_SQUASH_H
++#define SQFS_SQUASH_H
++
++#include <string.h>
++#include <errno.h>
++#include <assert.h>
++
++#include "squash/dir.h"
++#include "squash/file.h"
++#include "squash/fs.h"
++#include "squash/traverse.h"
++#include "squash/util.h"
++#include "squash/private.h"
++#include "squash/fdtable.h"
++#include "squash/dirent.h"
++
++#define SQUASH_SEEK_SET 0 /* set file offset to offset */
++#define SQUASH_SEEK_CUR 1 /* set file offset to current plus offset */
++#define SQUASH_SEEK_END 2 /* set file offset to EOF plus offset */
++
++#define SQUASH_VALID_VFD(vfd) ((vfd) < squash_global_fdtable.nr && NULL != squash_global_fdtable.fds[(vfd)])
++#define SQUASH_VFD_FILE(vfd) (squash_global_fdtable.fds[(vfd)])
++
++extern sqfs_err squash_errno;
++
++sqfs_err squash_start();
++ssize_t squash_readlink_inode(sqfs *fs, sqfs_inode *node, char *buf, size_t bufsize);
++sqfs_err squash_follow_link(sqfs *fs, const char *path, sqfs_inode *node);
++struct squash_file * squash_find_entry(void *ptr);
++
++/*
++ * Obtains information about the file pointed to by path of a SquashFS fs.
++ * The buf argument is a pointer to a stat structure as defined by
++ * <sys/stat.h> and into which information is placed concerning the file.
++ * Upon successful completion a value of 0 is returned.
++ * Otherwise, a value of -1 is returned and
++ * error is set to the reason of the error.
++ */
++int squash_stat(sqfs *fs, const char *path, struct stat *buf);
++
++/*
++ * Acts like squash_stat() except in the case where the named file
++ * is a symbolic link; squash_lstat() returns information about the link,
++ * while squash_stat() returns information about the file the link references.
++ */
++int squash_lstat(sqfs *fs, const char *path, struct stat *buf);
++
++/*
++ * Obtains the same information as squash_stat()
++ * about an open file known by the virtual file descriptor vfd.
++ */
++int squash_fstat(int vfd, struct stat *buf);
++
++/*
++ * Opens the file name specified by path of fs for reading.
++ * If successful, squash_open() returns a non-negative integer,
++ * termed a vfd(virtual file descriptor).
++ * It returns -1 on failure and sets error to the reason of the error.
++ * The file pointer (used to mark the current position within the file)
++ * is set to the beginning of the file.
++ * The returned vfd should later be closed by squash_close().
++ */
++int squash_open(sqfs *fs, const char *path);
++
++int squash_open_inner(sqfs *fs, const char *path, short follow_link);
++
++/*
++ * Deletes a vfd(virtual file descriptor) from
++ * the per-process object reference table.
++ * Upon successful completion, a value of 0 is returned.
++ * Otherwise, a value of -1 is returned and error is set to
++ * the reason of the error.
++ */
++int squash_close(int vfd);
++
++/*
++ * Attempts to read nbyte bytes of data from the object
++ * referenced by vfs into the buffer pointed to by buf,
++ * starting at a position given by the pointer
++ * associated with vfd (see squash_lseek),
++ * which is then incremented by the number of bytes actually read upon return.
++ * When successful it returns the number of bytes actually read
++ * and placed in the buffer;
++ * upon reading end-of-file, zero is returned;
++ * Otherwise, a value of -1 is returned and error is set to
++ * the reason of the error.
++ */
++ssize_t squash_read(int vfd, void *buf, sqfs_off_t nbyte);
++
++/*
++ * Repositions the offset of vfs to the argument offset,
++ * according to the directive whence.
++ * If whence is SQUASH_SEEK_SET then the offset is set to offset bytes;
++ * if whence is SQUASH_SEEK_CUR, the offset is set to
++ * its current location plus offset bytes;
++ * if whence is SQUASH_SEEK_END, the offset is set to
++ * the size of the file and
++ * subsequent reads of the data return bytes of zeros.
++ * The argument fildes` must be an open virtual file descriptor.
++ * Upon successful completion,
++ * it returns the resulting offset location as measured in bytes
++ * from the beginning of the file.
++ * Otherwise, a value of -1 is returned and
++ * error is set to the reason of the error.
++ */
++off_t squash_lseek(int vfd, off_t offset, int whence);
++
++/*
++ * Places the contents of the symbolic link path of a SquashFS fs
++ * in the buffer buf, which has size bufsize.
++ * It does not append a NUL character to buf.
++ * If it succeeds the call returns the count of characters placed in the buffer;
++ * otherwise -1 is returned and error is set to the reason of the error.
++ */
++ssize_t squash_readlink(sqfs *fs, const char *path, char *buf, size_t bufsize);
++
++/*
++ * Opens the directory named by filename of a SquashFS fs,
++ * associates a directory stream with it and returns a pointer
++ * to be used to identify the directory stream in subsequent operations.
++ * The pointer NULL is returned if filename cannot be accessed,
++ * or if it cannot allocate enough memory to hold the whole thing,
++ * and sets error to the reason of the error.
++ * The returned resource should later be closed by squash_closedir().
++ */
++SQUASH_DIR * squash_opendir(sqfs *fs, const char *filename);
++
++SQUASH_DIR * squash_opendir_inner(sqfs *fs, const char *filename, short follow_link);
++
++/*
++ * Closes the named directory stream and
++ * frees the structure associated with the dirp pointer,
++ * returning 0 on success.
++ * On failure, -1 is returned and error is set to the reason of the error.
++ */
++int squash_closedir(SQUASH_DIR *dirp);
++
++/*
++ * Returns a pointer to the next directory entry.
++ * It returns NULL upon reaching the end of the directory or on error. 
++ * In the event of an error, error is set to the reason of the error.
++ */
++struct SQUASH_DIRENT * squash_readdir(SQUASH_DIR *dirp);
++
++/*
++ * Returns the current location associated with the named directory stream.
++ */
++long squash_telldir(SQUASH_DIR *dirp);
++
++/*
++ * Sets the position of the next squash_readdir() operation
++ * on the directory stream.
++ * The new position reverts to the one associated with the directory stream
++ * when the squash_telldir() operation was performed.
++ */
++void squash_seekdir(SQUASH_DIR *dirp, long loc);
++
++/*
++ * Resets the position of the named directory stream to
++ * the beginning of the directory.
++ */
++void squash_rewinddir(SQUASH_DIR *dirp);
++
++/*
++ * Returns the integer virtual file descriptor
++ * associated with the named directory stream.
++ * On failure, -1 is returned and error is set to the reason of the error.
++ */
++int squash_dirfd(SQUASH_DIR *dirp);
++
++/*
++ * Reads the directory dirname of a SquashFS fs and
++ * builds an array of pointers to directory entries using malloc.
++ * If successful it returns the number of entries in the array; 
++ * otherwise -1 is returned and error is set to the reason of the error.
++ * A pointer to the array of directory entries is stored
++ * in the location referenced by namelist (even if the number of entries is 0),
++ * which should later be freed via free() by freeing each pointer
++ * in the array and then the array itself.
++ * The select argument is a pointer to a user supplied subroutine which is
++ * called by scandir to select which entries are to be included in the array.
++ * The select routine is passed a pointer to a directory entry
++ * and should return a non-zero value if the directory entry
++ * is to be included in the array.
++ * If select is NULL, then all the directory entries will be included.
++ * The compar argument is a pointer to a user supplied subroutine
++ * which is passed to qsort to sort the completed array.
++ * If this pointer is NULL, then the array is not sorted.
++ */
++int squash_scandir(sqfs *fs, const char *dirname, struct SQUASH_DIRENT ***namelist,
++	int (*select)(const struct SQUASH_DIRENT *),
++	int (*compar)(const struct SQUASH_DIRENT **, const struct SQUASH_DIRENT **));
++
++/*
++ * Extracts the file `path` from `fs` to a temporary file
++ * inside the temporary folder.
++ * Upon successful completion the path of the extracted temporary file
++ * is returned.
++ * Otherwise, a value of `NULL` is returned
++ * and `errno` is set to the reason of the error.
++ * The returned path is referenced by an internal cache and must not be freed.
++ */
++#ifdef _WIN32
++#define SQUASH_OS_PATH const wchar_t*
++#else
++#define SQUASH_OS_PATH const char*
++#endif
++SQUASH_OS_PATH squash_tmpdir();
++SQUASH_OS_PATH squash_tmpf(SQUASH_OS_PATH tmpdir, const char *ext_name);
++SQUASH_OS_PATH squash_extract(sqfs *fs, const char *path, const char *ext_name);
++void squash_extract_clear_cache();
++
++#endif
+diff --git a/ruby/include/squash/cache.h b/ruby/include/squash/cache.h
+new file mode 100644
+index 00000000..e60a5924
+--- /dev/null
++++ b/ruby/include/squash/cache.h
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_CACHE_H
++#define SQFS_CACHE_H
++
++#include "squash/common.h"
++
++/* Really simplistic cache
++ *  - Linear search
++ *  - Linear eviction
++ *  - No thread safety
++ *  - Misses are caller's responsibility
++ */
++#define SQFS_CACHE_IDX_INVALID 0
++
++typedef uint64_t sqfs_cache_idx;
++typedef void (*sqfs_cache_dispose)(void* data);
++
++typedef struct {
++	sqfs_cache_idx *idxs;
++	uint8_t *buf;
++	
++	sqfs_cache_dispose dispose;
++	
++	size_t size, count;
++	size_t next; /* next block to evict */
++	
++	MUTEX mutex;
++} sqfs_cache;
++
++sqfs_err sqfs_cache_init(sqfs_cache *cache, size_t size, size_t count,
++	sqfs_cache_dispose dispose);
++void sqfs_cache_destroy(sqfs_cache *cache);
++
++void *sqfs_cache_get(sqfs_cache *cache, sqfs_cache_idx idx);
++void *sqfs_cache_add(sqfs_cache *cache, sqfs_cache_idx idx);
++
++
++typedef struct {
++	sqfs_block *block;
++	size_t data_size;
++} sqfs_block_cache_entry;
++
++sqfs_err sqfs_block_cache_init(sqfs_cache *cache, size_t count);
++
++#endif
+diff --git a/ruby/include/squash/common.h b/ruby/include/squash/common.h
+new file mode 100644
+index 00000000..91154e81
+--- /dev/null
++++ b/ruby/include/squash/common.h
+@@ -0,0 +1,80 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_COMMON_H
++#define SQFS_COMMON_H
++
++#include <stdint.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include "squash/mutex.h"
++
++#ifdef _WIN32
++	#include "squash/windows.h"
++        struct squash_windows_dirent
++        {
++                long d_namlen;
++                ino_t d_ino;
++                char d_name[256 + 1]; // i.e. SQUASHFS_NAME_LEN + 1
++                uint8_t d_type;
++        };
++        #define SQUASH_DIRENT squash_windows_dirent
++#else
++	#include <sys/dir.h>
++	#include <unistd.h>
++	typedef mode_t sqfs_mode_t;
++	typedef uid_t sqfs_id_t;
++	typedef off_t sqfs_off_t;
++        #define SQUASH_DIRENT dirent
++#endif
++typedef const uint8_t * sqfs_fd_t;
++
++typedef enum {
++	SQFS_OK,
++	SQFS_ERR,
++	SQFS_BADFORMAT,		/* unsupported file format */
++	SQFS_BADVERSION,	/* unsupported squashfs version */
++	SQFS_BADCOMP,		/* unsupported compression method */
++	SQFS_UNSUP			/* unsupported feature */
++} sqfs_err;
++
++#define SQFS_INODE_ID_BYTES 6
++typedef uint64_t sqfs_inode_id;
++typedef uint32_t sqfs_inode_num;
++
++typedef struct sqfs sqfs;
++typedef struct sqfs_inode sqfs_inode;
++
++typedef struct {
++	size_t size;
++	void *data;
++	short data_need_freeing;
++} sqfs_block;
++
++typedef struct {
++	sqfs_off_t block;
++	size_t offset;
++} sqfs_md_cursor;
++
++#endif
+diff --git a/ruby/include/squash/decompress.h b/ruby/include/squash/decompress.h
+new file mode 100644
+index 00000000..1d951bca
+--- /dev/null
++++ b/ruby/include/squash/decompress.h
+@@ -0,0 +1,42 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_DECOMPRESS_H
++#define SQFS_DECOMPRESS_H
++
++#include "squash/common.h"
++
++#define SQFS_COMP_UNKNOWN	0
++#define SQFS_COMP_MAX		16
++
++typedef int sqfs_compression_type;
++
++char *sqfs_compression_name(sqfs_compression_type type);
++
++typedef sqfs_err (*sqfs_decompressor)(void *in, size_t insz,
++	void *out, size_t *outsz);
++
++sqfs_decompressor sqfs_decompressor_get(sqfs_compression_type type);
++
++#endif
+diff --git a/ruby/include/squash/dir.h b/ruby/include/squash/dir.h
+new file mode 100644
+index 00000000..d3bf71a9
+--- /dev/null
++++ b/ruby/include/squash/dir.h
+@@ -0,0 +1,94 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_DIR_H
++#define SQFS_DIR_H
++
++#include "squash/common.h"
++
++#include "squash/squashfs_fs.h"
++
++typedef struct {
++	sqfs_md_cursor cur;
++	sqfs_off_t offset, total;
++	struct squashfs_dir_header header;
++} sqfs_dir;
++
++typedef struct {
++	sqfs_inode_id inode;
++	sqfs_inode_num inode_number;
++	int type;
++	char *name;
++	size_t name_size;
++	sqfs_off_t offset, next_offset;
++} sqfs_dir_entry;
++
++typedef char sqfs_name[SQUASHFS_NAME_LEN + 1];
++
++typedef char sqfs_path[SQUASHFS_PATH_LEN + 1];
++
++/* Begin a directory traversal, initializing the dir structure.
++   If offset is non-zero, fast-forward to that offset in the directory. */
++sqfs_err 	sqfs_dir_open(sqfs *fs, sqfs_inode *inode, sqfs_dir *dir,
++	off_t offset);
++
++/* Initialize a dir_entry structure before use.
++	'namebuf' should be a character buffer of enough size to hold any name,
++	see sqfs_name. It may also be NULL, in which case no names will be placed
++	into this dir_entry. */
++void sqfs_dentry_init(sqfs_dir_entry *entry, char *namebuf);
++
++/* Get the next directory entry, filling in the dir_entry.
++	 Returns 0 when out of entries, or on error. */
++short sqfs_dir_next(sqfs *fs, sqfs_dir *dir, sqfs_dir_entry *entry,
++	sqfs_err *err);
++
++/* Lookup an entry in a directory inode.
++	 The dir_entry must have been initialized with a buffer. */
++sqfs_err sqfs_dir_lookup(sqfs *fs, sqfs_inode *inode,
++	const char *name, size_t namelen, sqfs_dir_entry *entry, short *found);
++
++/* Lookup a complete path, and replace *inode with the results.
++	 Uses / (slash) as the directory separator. */
++sqfs_err sqfs_lookup_path_inner(sqfs *fs, sqfs_inode *inode, const char *path,
++	short *found, short follow_link);
++sqfs_err sqfs_lookup_path(sqfs *fs, sqfs_inode *inode, const char *path,
++	short *found);
++
++
++/* Accessors on sqfs_dir_entry */
++sqfs_off_t			sqfs_dentry_offset			(sqfs_dir_entry *entry);
++sqfs_off_t			sqfs_dentry_next_offset	(sqfs_dir_entry *entry);
++int							sqfs_dentry_type				(sqfs_dir_entry *entry);
++sqfs_mode_t			sqfs_dentry_mode				(sqfs_dir_entry *entry);
++sqfs_inode_id		sqfs_dentry_inode				(sqfs_dir_entry *entry);
++sqfs_inode_num	sqfs_dentry_inode_num		(sqfs_dir_entry *entry);
++size_t					sqfs_dentry_name_size		(sqfs_dir_entry *entry);
++short						sqfs_dentry_is_dir			(sqfs_dir_entry *entry);
++
++/* Yields the name of this directory entry, or NULL if the dir_entry structure
++   was initialized without a name buffer. Name will be nul-terminated. */
++const char *		sqfs_dentry_name				(sqfs_dir_entry *entry);
++
++#endif
+diff --git a/ruby/include/squash/dirent.h b/ruby/include/squash/dirent.h
+new file mode 100644
+index 00000000..6ec2ac69
+--- /dev/null
++++ b/ruby/include/squash/dirent.h
+@@ -0,0 +1,36 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef DIRENT_H_245C4278
++#define DIRENT_H_245C4278
++
++#include <sys/types.h>
++
++#define SQUASH_DIR_MAGIC_LEN 18
++#define MAX_DIR_ENT 1024
++
++typedef struct {
++	sqfs *fs;
++	int	fd;	/* virtual file descriptor associated with directory */
++	sqfs_inode node;
++	sqfs_dir dir;
++	// CAUTION: this is a big struct, mind the SQUASHFS_NAME_LEN size
++	struct {
++		sqfs_dir_entry entry;
++		struct SQUASH_DIRENT sysentry;
++		sqfs_name name;
++		short not_eof;
++	} *entries;
++	size_t nr; /* allocated size for entries */
++	int actual_nr; /* actual number of entries read */
++	long loc;	/* offset in current buffer */
++        char *filename;
++        void *payload;
++} SQUASH_DIR;
++
++#endif /* end of include guard: DIRENT_H_245C4278 */
+diff --git a/ruby/include/squash/fdtable.h b/ruby/include/squash/fdtable.h
+new file mode 100644
+index 00000000..65d452f0
+--- /dev/null
++++ b/ruby/include/squash/fdtable.h
+@@ -0,0 +1,31 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef FDTABLE_H_60F13289
++#define FDTABLE_H_60F13289
++
++#include "squash/common.h"
++
++struct squash_file {
++	int fd;
++	sqfs *fs;
++	sqfs_inode node;
++	struct stat st;
++	uint64_t pos;
++	void *payload;
++};
++
++struct squash_fdtable {
++	size_t nr;
++	struct squash_file **fds;
++	size_t end;
++};
++
++extern struct squash_fdtable squash_global_fdtable;
++
++#endif /* end of include guard: FDTABLE_H_60F13289 */
+diff --git a/ruby/include/squash/file.h b/ruby/include/squash/file.h
+new file mode 100644
+index 00000000..eafd8ed4
+--- /dev/null
++++ b/ruby/include/squash/file.h
+@@ -0,0 +1,78 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_FILE_H
++#define SQFS_FILE_H
++
++#include "squash/common.h"
++
++#include "squash/squashfs_fs.h"
++
++#include "squash/cache.h"
++
++sqfs_err sqfs_frag_entry(sqfs *fs, struct squashfs_fragment_entry *frag,
++	uint32_t idx);
++
++sqfs_err sqfs_frag_block(sqfs *fs, sqfs_inode *inode,
++	size_t *offset, size_t *size, sqfs_block **block);
++
++typedef uint32_t sqfs_blocklist_entry;
++typedef struct {
++	sqfs *fs;
++	size_t remain;			/* How many blocks left in the file? */
++	sqfs_md_cursor cur;	/* Points to next blocksize in MD */
++	short started;
++
++	uint64_t pos;
++	
++	uint64_t block;			/* Points to next data block location */
++	sqfs_blocklist_entry header; /* Packed blocksize data */
++	uint32_t input_size;				 /* Extracted size of this block */
++} sqfs_blocklist;
++
++size_t sqfs_blocklist_count(sqfs *fs, sqfs_inode *inode);
++
++void sqfs_blocklist_init(sqfs *fs, sqfs_inode *inode, sqfs_blocklist *bl);
++sqfs_err sqfs_blocklist_next(sqfs_blocklist *bl);
++
++
++sqfs_err sqfs_read_range(sqfs *fs, sqfs_inode *inode, sqfs_off_t start,
++	sqfs_off_t *size, void *buf);
++
++
++/*** Block index for skipping to the middle of large files ***/
++
++typedef struct {
++	uint64_t data_block;	/* A data block where the file continues */
++	uint32_t md_block;		/* A metadata block with blocksizes that continue from
++													 data_block */
++} sqfs_blockidx_entry;
++
++sqfs_err sqfs_blockidx_init(sqfs_cache *cache);
++
++/* Get a blocklist fast-forwarded to the correct location */
++sqfs_err sqfs_blockidx_blocklist(sqfs *fs, sqfs_inode *inode,
++	sqfs_blocklist *bl, sqfs_off_t start);
++
++#endif
+diff --git a/ruby/include/squash/fs.h b/ruby/include/squash/fs.h
+new file mode 100644
+index 00000000..9c3c6998
+--- /dev/null
++++ b/ruby/include/squash/fs.h
+@@ -0,0 +1,132 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_FS_H
++#define SQFS_FS_H
++
++#include "squash/common.h"
++
++#include "squash/squashfs_fs.h"
++
++#include "squash/cache.h"
++#include "squash/decompress.h"
++#include "squash/table.h"
++
++struct sqfs {
++	sqfs_fd_t fd;
++	size_t offset;
++	struct squashfs_super_block *sb;
++	sqfs_table id_table;
++	sqfs_table frag_table;
++	sqfs_table export_table;
++	sqfs_cache md_cache;
++	sqfs_cache data_cache;
++	sqfs_cache frag_cache;
++	sqfs_cache blockidx;
++	sqfs_decompressor decompressor;
++        const char *root_alias;
++        const char *root_alias2;
++};
++
++struct sqfs_inode {
++	struct squashfs_base_inode base;
++	int nlink;
++	
++	sqfs_md_cursor next;
++	
++	union {
++		struct {
++			int major, minor;
++		} dev;
++		size_t symlink_size;
++		struct {
++			uint64_t start_block;
++			uint64_t file_size;
++			uint32_t frag_idx;
++			uint32_t frag_off;
++		} reg;
++		struct {
++			uint32_t start_block;
++			uint16_t offset;
++			uint32_t dir_size;
++			uint16_t idx_count;
++			uint32_t parent_inode;
++		} dir;
++	} xtra;
++};
++
++void sqfs_version_supported(int *min_major, int *min_minor, int *max_major,
++	int *max_minor);
++
++/* Number of groups of size 'group' required to hold size 'total' */
++size_t sqfs_divceil(uint64_t total, size_t group);
++
++
++sqfs_err sqfs_init(sqfs *fs, sqfs_fd_t fd, size_t offset);
++void sqfs_destroy(sqfs *fs);
++
++/* Ok to call these even on incompletely constructed filesystems */
++void sqfs_version(sqfs *fs, int *major, int *minor);
++sqfs_compression_type sqfs_compression(sqfs *fs);
++
++
++void sqfs_md_header(uint16_t hdr, short *compressed, uint16_t *size);
++void sqfs_data_header(uint32_t hdr, short *compressed, uint32_t *size);
++
++sqfs_err sqfs_block_read(sqfs *fs, sqfs_off_t pos, short compressed, uint32_t size,
++	size_t outsize, sqfs_block **block);
++void sqfs_block_dispose(sqfs_block *block);
++
++sqfs_err sqfs_md_block_read(sqfs *fs, sqfs_off_t pos, size_t *data_size,
++	sqfs_block **block);
++sqfs_err sqfs_data_block_read(sqfs *fs, sqfs_off_t pos, uint32_t hdr,
++	sqfs_block **block);
++
++/* Don't dispose after getting block, it's in the cache */
++sqfs_err sqfs_md_cache(sqfs *fs, sqfs_off_t *pos, sqfs_block **block);
++sqfs_err sqfs_data_cache(sqfs *fs, sqfs_cache *cache, sqfs_off_t pos,
++	uint32_t hdr, sqfs_block **block);
++
++void sqfs_md_cursor_inode(sqfs_md_cursor *cur, sqfs_inode_id id, sqfs_off_t base);
++
++sqfs_err sqfs_md_read(sqfs *fs, sqfs_md_cursor *cur, void *buf, size_t size);
++
++
++sqfs_err sqfs_inode_get(sqfs *fs, sqfs_inode *inode, sqfs_inode_id id);
++
++sqfs_mode_t sqfs_mode(int inode_type);
++sqfs_err sqfs_id_get(sqfs *fs, uint16_t idx, sqfs_id_t *id);
++
++/* Puts up to *size characters of the link name into buf. Always null-
++ * terminates the buffer. Pass null as buf to have the size returned. */
++sqfs_err sqfs_readlink(sqfs *fs, sqfs_inode *inode, char *buf, size_t *size);
++
++/* Find inode_id by inode_num */
++int sqfs_export_ok(sqfs *fs);
++sqfs_err sqfs_export_inode(sqfs *fs, sqfs_inode_num n, sqfs_inode_id *i);
++
++/* Find the root inode */
++sqfs_inode_id sqfs_inode_root(sqfs *fs);
++
++#endif
+diff --git a/ruby/include/squash/hash.h b/ruby/include/squash/hash.h
+new file mode 100644
+index 00000000..c0eaed0a
+--- /dev/null
++++ b/ruby/include/squash/hash.h
+@@ -0,0 +1,63 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_HASH_H
++#define SQFS_HASH_H
++
++#include "squash/common.h"
++
++/* Simple hashtable
++ *	- Keys are integers
++ *	- Values are opaque data
++ *
++ * Implementation
++ *	- Hash function is modulus
++ *	- Chaining for duplicates
++ *	- Sizes are powers of two
++ */
++typedef uint32_t sqfs_hash_key;
++typedef void *sqfs_hash_value;
++
++typedef struct sqfs_hash_bucket {
++	struct sqfs_hash_bucket *next;
++	sqfs_hash_key key;
++	char value[1]; /* extended to size */
++} sqfs_hash_bucket;
++
++typedef struct {
++	size_t value_size;
++	size_t capacity;
++	size_t size;
++	sqfs_hash_bucket **buckets;
++} sqfs_hash;
++
++sqfs_err sqfs_hash_init(sqfs_hash *h, size_t vsize, size_t initial);
++void sqfs_hash_destroy(sqfs_hash *h);
++
++sqfs_hash_value sqfs_hash_get(sqfs_hash *h, sqfs_hash_key k);
++
++sqfs_err sqfs_hash_add(sqfs_hash *h, sqfs_hash_key k, sqfs_hash_value v);
++sqfs_err sqfs_hash_remove(sqfs_hash *h, sqfs_hash_key k);
++
++#endif
+diff --git a/ruby/include/squash/mutex.h b/ruby/include/squash/mutex.h
+new file mode 100644
+index 00000000..61d71189
+--- /dev/null
++++ b/ruby/include/squash/mutex.h
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef LIBSQUASH_MUTEX_H
++#define LIBSQUASH_MUTEX_H
++
++#ifdef _WIN32
++    #include <windows.h>
++    #include <process.h>
++#else
++    #include <pthread.h>
++#endif
++
++#ifdef _WIN32
++   #define MUTEX HANDLE
++#else
++   #define MUTEX pthread_mutex_t
++#endif
++
++extern MUTEX squash_global_mutex;
++
++int MUTEX_INIT(MUTEX *mutex);
++int MUTEX_LOCK(MUTEX *mutex);
++int MUTEX_UNLOCK(MUTEX *mutex);
++int MUTEX_DESTORY(MUTEX *mutex);
++
++#endif //LIBSQUASH_MUTEX_H
+diff --git a/ruby/include/squash/nonstd.h b/ruby/include/squash/nonstd.h
+new file mode 100644
+index 00000000..f14b6fed
+--- /dev/null
++++ b/ruby/include/squash/nonstd.h
+@@ -0,0 +1,34 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_STD_H
++#define SQFS_STD_H
++
++#include "squash/common.h"
++
++/* Non-standard functions that we need */
++
++dev_t sqfs_makedev(int maj, int min);
++
++#endif
+diff --git a/ruby/include/squash/private.h b/ruby/include/squash/private.h
+new file mode 100644
+index 00000000..3d39ce06
+--- /dev/null
++++ b/ruby/include/squash/private.h
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_PRIVATE_H
++#define SQFS_PRIVATE_H
++
++#include "squash.h"
++
++#include <sys/stat.h>
++
++/* Fill in a stat structure. Does not set st_ino */
++sqfs_err sqfs_stat(sqfs *fs, sqfs_inode *inode, struct stat *st);
++
++#endif
+diff --git a/ruby/include/squash/squashfs_fs.h b/ruby/include/squash/squashfs_fs.h
+new file mode 100644
+index 00000000..fda66667
+--- /dev/null
++++ b/ruby/include/squash/squashfs_fs.h
+@@ -0,0 +1,318 @@
++/*
++ * squashfs_fs.h
++ *
++ * Copyright (c) 2012  Phillip Lougher <phillip@squashfs.org.uk>
++ *
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQUASHFS_FS
++#define SQUASHFS_FS
++
++#ifdef __linux__
++	#include <linux/types.h>
++#else
++	#include <stdint.h>
++	typedef uint16_t __le16;
++	typedef uint32_t __le32;
++	typedef uint64_t __le64;
++#endif
++
++#define SQUASHFS_MAGIC 0x73717368
++
++
++#define SQUASHFS_CACHED_FRAGMENTS	CONFIG_SQUASHFS_FRAGMENT_CACHE_SIZE
++#define SQUASHFS_MAJOR			4
++#define SQUASHFS_MINOR			0
++#define SQUASHFS_START			0
++
++/* size of metadata (inode and directory) blocks */
++#define SQUASHFS_METADATA_SIZE		8192
++#define SQUASHFS_METADATA_LOG		13
++
++/* default size of data blocks */
++#define SQUASHFS_FILE_SIZE		131072
++#define SQUASHFS_FILE_LOG		17
++
++#define SQUASHFS_FILE_MAX_SIZE		1048576
++#define SQUASHFS_FILE_MAX_LOG		20
++
++/* Max number of uids and gids */
++#define SQUASHFS_IDS			65536
++
++/* Max length of filename (not 255) */
++#define SQUASHFS_NAME_LEN		256
++#define SQUASHFS_PATH_LEN		2048
++#define SQUASHFS_MAX_LINK_LEVEL	32
++#define SQUASHFS_INVALID_FRAG		(0xffffffffU)
++#define SQUASHFS_INVALID_XATTR		(0xffffffffU)
++#define SQUASHFS_INVALID_BLK		((int64_t)-1)
++
++/* Filesystem flags */
++#define SQUASHFS_NOI			0
++#define SQUASHFS_NOD			1
++#define SQUASHFS_NOF			3
++#define SQUASHFS_NO_FRAG		4
++#define SQUASHFS_ALWAYS_FRAG		5
++#define SQUASHFS_DUPLICATE		6
++#define SQUASHFS_EXPORT			7
++#define SQUASHFS_COMP_OPT		10
++
++/* Max number of types and file types */
++#define SQUASHFS_DIR_TYPE		1
++#define SQUASHFS_REG_TYPE		2
++#define SQUASHFS_SYMLINK_TYPE		3
++#define SQUASHFS_BLKDEV_TYPE		4
++#define SQUASHFS_CHRDEV_TYPE		5
++#define SQUASHFS_FIFO_TYPE		6
++#define SQUASHFS_SOCKET_TYPE		7
++#define SQUASHFS_LDIR_TYPE		8
++#define SQUASHFS_LREG_TYPE		9
++#define SQUASHFS_LSYMLINK_TYPE		10
++#define SQUASHFS_LBLKDEV_TYPE		11
++#define SQUASHFS_LCHRDEV_TYPE		12
++#define SQUASHFS_LFIFO_TYPE		13
++#define SQUASHFS_LSOCKET_TYPE		14
++
++/* Xattr types */
++#define SQUASHFS_XATTR_USER             0
++#define SQUASHFS_XATTR_TRUSTED          1
++#define SQUASHFS_XATTR_SECURITY         2
++#define SQUASHFS_XATTR_VALUE_OOL        256
++#define SQUASHFS_XATTR_PREFIX_MASK      0xff
++
++#define SQUASHFS_COMPRESSED_BIT		(1 << 15)
++
++#define SQUASHFS_COMPRESSED_BIT_BLOCK	(1 << 24)
++
++
++/* cached data constants for filesystem */
++#define SQUASHFS_CACHED_BLKS		8
++
++#define SQUASHFS_MAX_FILE_SIZE_LOG	64
++
++#define SQUASHFS_MAX_FILE_SIZE		(1LL << \
++					(SQUASHFS_MAX_FILE_SIZE_LOG - 2))
++
++/* meta index cache */
++#define SQUASHFS_META_INDEXES	(SQUASHFS_METADATA_SIZE / sizeof(unsigned int))
++#define SQUASHFS_META_ENTRIES	127
++#define SQUASHFS_META_SLOTS	8
++
++
++/*
++ * definitions for structures on disk
++ */
++#define ZLIB_COMPRESSION	1
++
++struct squashfs_super_block {
++	__le32			s_magic;
++	__le32			inodes;
++	__le32			mkfs_time;
++	__le32			block_size;
++	__le32			fragments;
++	__le16			compression;
++	__le16			block_log;
++	__le16			flags;
++	__le16			no_ids;
++	__le16			s_major;
++	__le16			s_minor;
++	__le64			root_inode;
++	__le64			bytes_used;
++	__le64			id_table_start;
++	__le64			xattr_id_table_start;
++	__le64			inode_table_start;
++	__le64			directory_table_start;
++	__le64			fragment_table_start;
++	__le64			lookup_table_start;
++};
++
++struct squashfs_dir_index {
++	__le32			index;
++	__le32			start_block;
++	__le32			size;
++};
++
++struct squashfs_base_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++};
++
++struct squashfs_ipc_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++};
++
++struct squashfs_lipc_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++	__le32			xattr;
++};
++
++struct squashfs_dev_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++	__le32			rdev;
++};
++
++struct squashfs_ldev_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++	__le32			rdev;
++	__le32			xattr;
++};
++
++struct squashfs_symlink_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++	__le32			symlink_size;
++};
++
++struct squashfs_reg_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			start_block;
++	__le32			fragment;
++	__le32			offset;
++	__le32			file_size;
++};
++
++struct squashfs_lreg_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le64			start_block;
++	__le64			file_size;
++	__le64			sparse;
++	__le32			nlink;
++	__le32			fragment;
++	__le32			offset;
++	__le32			xattr;
++};
++
++struct squashfs_dir_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			start_block;
++	__le32			nlink;
++	__le16			file_size;
++	__le16			offset;
++	__le32			parent_inode;
++};
++
++struct squashfs_ldir_inode {
++	__le16			inode_type;
++	__le16			mode;
++	__le16			uid;
++	__le16			guid;
++	__le32			mtime;
++	__le32			inode_number;
++	__le32			nlink;
++	__le32			file_size;
++	__le32			start_block;
++	__le32			parent_inode;
++	__le16			i_count;
++	__le16			offset;
++	__le32			xattr;
++};
++
++struct squashfs_dir_entry {
++	__le16			offset;
++	__le16			inode_number;
++	__le16			type;
++	__le16			size;
++};
++
++struct squashfs_dir_header {
++	__le32			count;
++	__le32			start_block;
++	__le32			inode_number;
++};
++
++struct squashfs_fragment_entry {
++	__le64			start_block;
++	__le32			size;
++	unsigned int		unused;
++};
++
++struct squashfs_xattr_entry {
++	__le16			type;
++	__le16			size;
++};
++
++struct squashfs_xattr_val {
++	__le32			vsize;
++};
++
++struct squashfs_xattr_id {
++	__le64			xattr;
++	__le32			count;
++	__le32			size;
++};
++
++struct squashfs_xattr_id_table {
++	__le64			xattr_table_start;
++	__le32			xattr_ids;
++	__le32			unused;
++};
++
++#endif
+diff --git a/ruby/include/squash/stack.h b/ruby/include/squash/stack.h
+new file mode 100644
+index 00000000..99782128
+--- /dev/null
++++ b/ruby/include/squash/stack.h
+@@ -0,0 +1,54 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_STACK_H
++#define SQFS_STACK_H
++
++#include "squash/common.h"
++
++typedef void (*sqfs_stack_free_t)(void *v);
++
++typedef struct {
++	size_t value_size;
++	size_t size;
++	size_t capacity;
++	char *items;
++	sqfs_stack_free_t freer;
++} sqfs_stack;
++
++/* Ensures the struct is in a safe state */
++void sqfs_stack_init(sqfs_stack *s);
++
++sqfs_err sqfs_stack_create(sqfs_stack *s, size_t vsize, size_t initial,
++	sqfs_stack_free_t freer);
++void sqfs_stack_destroy(sqfs_stack *s);
++
++sqfs_err sqfs_stack_push(sqfs_stack *s, void *vout);
++short sqfs_stack_pop(sqfs_stack *s);
++
++size_t sqfs_stack_size(sqfs_stack *s);
++sqfs_err sqfs_stack_at(sqfs_stack *s, size_t i, void *vout);
++sqfs_err sqfs_stack_top(sqfs_stack *s, void *vout);
++
++#endif
+diff --git a/ruby/include/squash/table.h b/ruby/include/squash/table.h
+new file mode 100644
+index 00000000..7dea081f
+--- /dev/null
++++ b/ruby/include/squash/table.h
+@@ -0,0 +1,41 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_TABLE_H
++#define SQFS_TABLE_H
++
++#include "squash/common.h"
++
++typedef struct {
++	size_t each;
++	uint64_t *blocks;
++} sqfs_table;
++
++sqfs_err sqfs_table_init(sqfs_table *table, sqfs_fd_t fd, sqfs_off_t start, size_t each,
++	size_t count);
++void sqfs_table_destroy(sqfs_table *table);
++
++sqfs_err sqfs_table_get(sqfs_table *table, sqfs *fs, size_t idx, void *buf);
++
++#endif
+diff --git a/ruby/include/squash/traverse.h b/ruby/include/squash/traverse.h
+new file mode 100644
+index 00000000..23a9c84f
+--- /dev/null
++++ b/ruby/include/squash/traverse.h
+@@ -0,0 +1,69 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_TRAVERSE_H
++#define SQFS_TRAVERSE_H
++
++#include "squash/common.h"
++
++#include "squash/dir.h"
++#include "squash/stack.h"
++
++typedef struct {
++	short dir_end;
++	sqfs_dir_entry entry;
++	char *path;
++	
++	
++	/* private */
++	int state;	
++	sqfs *fs;
++	sqfs_name namebuf;
++	sqfs_stack stack;
++	
++	size_t path_size, path_cap;
++	size_t path_last_size;
++} sqfs_traverse;
++
++/* Begin a recursive traversal of a filesystem tree.
++   Every sub-item of the given inode will be traversed in-order, but not
++   this inode itself. */
++sqfs_err sqfs_traverse_open(sqfs_traverse *trv, sqfs *fs, sqfs_inode_id iid);
++sqfs_err sqfs_traverse_open_inode(sqfs_traverse *trv, sqfs *fs,
++	sqfs_inode *inode);
++
++/* Clean up at any point during or after a traversal */
++void sqfs_traverse_close(sqfs_traverse *trv);
++
++/* Get the next item in the traversal. An item may be:
++   - A directory entry, in which case trv->entry will be filled
++	 - A marker that a directory is finished, in which case trv->dir_end will
++     be 1.
++   Returns 0 if there are no more items. */
++short sqfs_traverse_next(sqfs_traverse *trv, sqfs_err *err);
++
++/* Don't recurse into the directory just returned. */
++sqfs_err sqfs_traverse_prune(sqfs_traverse *trv);
++
++#endif
+diff --git a/ruby/include/squash/util.h b/ruby/include/squash/util.h
+new file mode 100644
+index 00000000..a7f14e69
+--- /dev/null
++++ b/ruby/include/squash/util.h
+@@ -0,0 +1,41 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef SQFS_UTIL_H
++#define SQFS_UTIL_H
++
++#include "squash/common.h"
++
++#include <stdio.h>
++
++/* Open a file, and optionally print a message on failure */
++sqfs_err sqfs_fd_open(const uint8_t *path, sqfs_fd_t *fd);
++
++/* Close a file */
++void sqfs_fd_close(sqfs_fd_t fd);
++
++/* Open a filesystem and print errors to stderr. */
++sqfs_err sqfs_open_image(sqfs *fs, const uint8_t *image, size_t offset);
++
++#endif
+diff --git a/ruby/include/squash/windows.h b/ruby/include/squash/windows.h
+new file mode 100644
+index 00000000..e336a359
+--- /dev/null
++++ b/ruby/include/squash/windows.h
+@@ -0,0 +1,107 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef WINDOWS_H_A80B5674
++#define WINDOWS_H_A80B5674
++
++#include <Windows.h>
++#include <stdint.h>
++#include <io.h>
++
++typedef unsigned short sqfs_mode_t;
++typedef uint32_t sqfs_id_t; /* Internal uids/gids are 32-bits */
++
++typedef SSIZE_T ssize_t;
++typedef DWORD64 sqfs_off_t;
++typedef uint32_t uid_t;		/* [???] user IDs */
++
++#ifndef S_IFIFO
++#define	S_IFIFO		0010000		/* [XSI] named pipe (fifo) */
++#endif
++
++#ifndef S_IFBLK
++#define	S_IFBLK		0060000		/* [XSI] block special */
++#endif
++
++#ifndef S_IFLNK
++#define	S_IFLNK		0120000		/* [XSI] symbolic link */
++#endif
++
++#ifndef S_IFSOCK
++#define	S_IFSOCK	0140000		/* [XSI] socket */
++#endif
++
++#ifndef S_ISBLK
++#define	S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)	/* block special */
++#endif
++
++#ifndef S_ISCHR
++#define	S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)	/* char special */
++#endif
++
++#ifndef S_ISDIR
++#define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)	/* directory */
++#endif
++
++#ifndef S_ISFIFO
++#define	S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)	/* fifo or socket */
++#endif
++
++#ifndef S_ISREG
++#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)	/* regular file */
++#endif
++
++#ifndef S_ISLNK
++#define	S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)	/* symbolic link */
++#endif
++
++#ifndef S_ISSOCK
++#define	S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)	/* socket */
++#endif
++
++#ifndef makedev
++#define	makedev(x,y)	((dev_t)(((x) << 24) | (y)))
++#endif
++
++#ifndef DT_UNKNOWN
++#define	DT_UNKNOWN	 0
++#endif
++
++#ifndef	DT_FIFO
++#define	DT_FIFO		 1
++#endif
++
++#ifndef	DT_CHR
++#define	DT_CHR		 2
++#endif
++
++#ifndef	DT_DIR
++#define	DT_DIR		 4
++#endif
++
++#ifndef	DT_BLK
++#define	DT_BLK		 6
++#endif
++
++#ifndef	DT_REG
++#define	DT_REG		 8
++#endif
++
++#ifndef	DT_LNK
++#define	DT_LNK		10
++#endif
++
++#ifndef	DT_SOCK
++#define	DT_SOCK		12
++#endif
++
++#ifndef	DT_WHT
++#define	DT_WHT		14
++#endif
++
++#endif /* end of include guard: WINDOWS_H_A80B5674 */
+diff --git a/ruby/squash_cache.c b/ruby/squash_cache.c
+new file mode 100644
+index 00000000..5a999cc8
+--- /dev/null
++++ b/ruby/squash_cache.c
+@@ -0,0 +1,99 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/cache.h"
++
++#include "squash/fs.h"
++
++#include <stdlib.h>
++
++sqfs_err sqfs_cache_init(sqfs_cache *cache, size_t size, size_t count,
++		sqfs_cache_dispose dispose) {
++	cache->size = size;
++	cache->count = count;
++	cache->dispose = dispose;
++	cache->next = 0;
++
++	MUTEX_INIT(&cache->mutex);
++	
++	cache->idxs = calloc(count, sizeof(sqfs_cache_idx));
++	cache->buf = calloc(count, size);
++	if (cache->idxs && cache->buf)
++		return SQFS_OK;
++	
++	sqfs_cache_destroy(cache);
++	return SQFS_ERR;
++}
++
++static void *sqfs_cache_entry(sqfs_cache *cache, size_t i) {
++	return cache->buf + i * cache->size;
++}
++
++void sqfs_cache_destroy(sqfs_cache *cache) {
++	MUTEX_DESTORY(&cache->mutex);
++
++	if (cache->buf && cache->idxs) {
++		size_t i;
++		for (i = 0; i < cache->count; ++i) {
++			if (cache->idxs[i] != SQFS_CACHE_IDX_INVALID)
++				cache->dispose(sqfs_cache_entry(cache, i));
++		}
++	}
++	free(cache->buf);
++	free(cache->idxs);
++}
++
++void *sqfs_cache_get(sqfs_cache *cache, sqfs_cache_idx idx) {
++	size_t i;
++	void *ret = NULL;
++	for (i = 0; i < cache->count; ++i) {
++		if (cache->idxs[i] == idx){
++			ret = sqfs_cache_entry(cache, i);
++			break;
++		}
++
++	}
++	return ret;
++}
++
++void *sqfs_cache_add(sqfs_cache *cache, sqfs_cache_idx idx) {
++	size_t i = (cache->next++);
++	cache->next %= cache->count;
++	
++	if (cache->idxs[i] != SQFS_CACHE_IDX_INVALID)
++		cache->dispose(sqfs_cache_entry(cache, i));
++	
++	cache->idxs[i] = idx;
++	return sqfs_cache_entry(cache, i);
++}
++
++static void sqfs_block_cache_dispose(void *data) {
++	sqfs_block_cache_entry *entry = (sqfs_block_cache_entry*)data;
++	sqfs_block_dispose(entry->block);
++}
++
++sqfs_err sqfs_block_cache_init(sqfs_cache *cache, size_t count) {
++	return sqfs_cache_init(cache, sizeof(sqfs_block_cache_entry), count,
++		&sqfs_block_cache_dispose);
++}
+diff --git a/ruby/squash_decompress.c b/ruby/squash_decompress.c
+new file mode 100644
+index 00000000..aa85602a
+--- /dev/null
++++ b/ruby/squash_decompress.c
+@@ -0,0 +1,44 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/decompress.h"
++#include "squash/squashfs_fs.h"
++
++#include <zlib.h>
++#include <assert.h>
++
++static sqfs_err sqfs_decompressor_zlib(void *in, size_t insz,
++		void *out, size_t *outsz) {
++	uLongf zout = *outsz;
++	int zerr = uncompress((Bytef*)out, &zout, in, insz);
++	if (zerr != Z_OK)
++		return SQFS_ERR;
++	*outsz = zout;
++	return SQFS_OK;
++}
++
++sqfs_decompressor sqfs_decompressor_get(sqfs_compression_type type) {
++	assert(ZLIB_COMPRESSION == type);
++	return &sqfs_decompressor_zlib;
++}
+diff --git a/ruby/squash_dir.c b/ruby/squash_dir.c
+new file mode 100644
+index 00000000..6c94dcd9
+--- /dev/null
++++ b/ruby/squash_dir.c
+@@ -0,0 +1,486 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash.h"
++
++#include "squash/dir.h"
++
++#include "squash/fs.h"
++
++#include <string.h>
++
++/* Read some directory metadata, updating the dir structure as necessary */
++static sqfs_err sqfs_dir_md_read(sqfs *fs, sqfs_dir *dir, void *buf,
++		size_t size);
++
++/* Fast forwards to a directory header. */
++typedef sqfs_err sqfs_dir_header_f(sqfs *fs, sqfs_md_cursor *cur,
++	struct squashfs_dir_index *index, short *stop, void *arg);
++static sqfs_err sqfs_dir_ff_header(sqfs *fs, sqfs_inode *inode, sqfs_dir *dir,
++	sqfs_dir_header_f func, void *arg);
++
++/* Fast forward a directory to the given offset. Return error if it doesn't
++	 exist. */
++static sqfs_err sqfs_dir_ff_offset(sqfs *fs, sqfs_inode *inode, sqfs_dir *dir,
++	sqfs_off_t offset);
++
++
++static sqfs_err sqfs_dir_md_read(sqfs *fs, sqfs_dir *dir, void *buf,
++		size_t size) {
++	dir->offset += size;
++	return sqfs_md_read(fs, &dir->cur, buf, size);
++}
++
++
++sqfs_err sqfs_dir_open(sqfs *fs, sqfs_inode *inode, sqfs_dir *dir,
++		off_t offset) {
++	if (!S_ISDIR(inode->base.mode))
++		return SQFS_ERR;
++
++	memset(dir, 0, sizeof(*dir));
++	dir->cur.block = inode->xtra.dir.start_block +
++		fs->sb->directory_table_start;
++	dir->cur.offset = inode->xtra.dir.offset;
++	dir->offset = 0;
++	dir->total = inode->xtra.dir.dir_size - 3;
++	
++	if (offset) {
++		/* Fast forward to the given offset */
++		sqfs_err err = sqfs_dir_ff_offset(fs, inode, dir, offset);
++		if (err)
++			return err;
++	}
++	
++	return SQFS_OK;
++}
++
++
++void sqfs_dentry_init(sqfs_dir_entry *entry, char *namebuf) {
++	entry->name = namebuf;
++}
++
++sqfs_off_t sqfs_dentry_offset(sqfs_dir_entry *entry) {
++	return entry->offset;
++}
++
++sqfs_off_t sqfs_dentry_next_offset(sqfs_dir_entry *entry) {
++	return entry->next_offset;
++}
++
++int sqfs_dentry_type(sqfs_dir_entry *entry) {
++	return entry->type;
++}
++sqfs_mode_t	sqfs_dentry_mode(sqfs_dir_entry *entry) {
++	return sqfs_mode(sqfs_dentry_type(entry));
++}
++
++sqfs_inode_id sqfs_dentry_inode(sqfs_dir_entry *entry) {
++	return entry->inode;
++}
++
++sqfs_inode_num sqfs_dentry_inode_num(sqfs_dir_entry *entry) {
++	return entry->inode_number;
++}
++
++size_t sqfs_dentry_name_size(sqfs_dir_entry *entry) {
++	return entry->name_size;
++}
++
++const char *sqfs_dentry_name(sqfs_dir_entry *entry) {
++	if (!entry->name)
++		return NULL;
++	
++	entry->name[sqfs_dentry_name_size(entry)] = '\0';
++	return entry->name;
++}
++
++short sqfs_dentry_is_dir(sqfs_dir_entry *entry) {
++	return S_ISDIR(sqfs_dentry_mode(entry));
++}
++
++
++
++short sqfs_dir_next(sqfs *fs, sqfs_dir *dir, sqfs_dir_entry *entry,
++		sqfs_err *err) {
++	struct squashfs_dir_entry e;
++	
++	*err = SQFS_OK;
++	entry->offset = dir->offset;
++	
++	while (dir->header.count == 0) {
++		if (dir->offset >= dir->total)
++			return 0;
++		
++		if ((*err = sqfs_dir_md_read(fs, dir, &dir->header, sizeof(dir->header))))
++			return 0;
++		++(dir->header.count); /* biased by one */
++	}
++	
++	if ((*err = sqfs_dir_md_read(fs, dir, &e, sizeof(e))))
++		return 0;
++	--(dir->header.count);
++	
++	entry->type = e.type;
++	entry->name_size = e.size + 1;
++	entry->inode = ((uint64_t)dir->header.start_block << 16) + e.offset;
++	/* e.inode_number is signed */
++	entry->inode_number = dir->header.inode_number + (int16_t)e.inode_number;
++	
++	*err = sqfs_dir_md_read(fs, dir, entry->name, sqfs_dentry_name_size(entry));
++	if (*err)
++		return 0;
++	
++	entry->next_offset = dir->offset;
++
++	return 1;
++}
++
++
++static sqfs_err sqfs_dir_ff_header(sqfs *fs, sqfs_inode *inode,
++		sqfs_dir *dir, sqfs_dir_header_f func, void *arg) {
++	struct squashfs_dir_index idx;
++	sqfs_md_cursor cur = inode->next;
++	size_t count = inode->xtra.dir.idx_count;
++
++	if (count == 0)
++		return SQFS_OK;
++	
++	while (count--) {
++		sqfs_err err;
++		short stop = 0;
++		
++		if ((err = sqfs_md_read(fs, &cur, &idx, sizeof(idx))))
++			return err;
++		
++		if ((err = func(fs, &cur, &idx, &stop, arg)))
++			return err;
++		if (stop)
++			break;
++		
++		dir->cur.block = idx.start_block + fs->sb->directory_table_start;
++		dir->offset = idx.index;
++	}
++
++	dir->cur.offset = (dir->cur.offset + dir->offset) % SQUASHFS_METADATA_SIZE;
++	return SQFS_OK;
++}
++
++
++/* Helper for sqfs_dir_ff_offset */
++static sqfs_err sqfs_dir_ff_offset_f(sqfs *fs, sqfs_md_cursor *cur,
++		struct squashfs_dir_index *index, short *stop, void *arg) {
++	sqfs_off_t offset = *(sqfs_off_t*)arg;
++	
++	if (index->index >= offset) {
++		*stop = 1;
++		return SQFS_OK;
++	}
++	
++	return sqfs_md_read(fs, cur, NULL, index->size + 1); /* skip name */
++}
++
++static sqfs_err sqfs_dir_ff_offset(sqfs *fs, sqfs_inode *inode, sqfs_dir *dir,
++		sqfs_off_t offset) {
++	sqfs_err err;
++	sqfs_dir_entry entry;
++	
++	err = sqfs_dir_ff_header(fs, inode, dir, sqfs_dir_ff_offset_f, &offset);
++	if (err)
++		return err;
++	
++	sqfs_dentry_init(&entry, NULL);
++	while (dir->offset < offset && sqfs_dir_next(fs, dir, &entry, &err))
++		; /* pass */
++	
++	if (err)
++		return err;
++	return dir->offset == offset ? SQFS_OK : SQFS_ERR;
++}
++
++
++/* Helper for sqfs_dir_lookup */
++typedef struct {
++	const char *cmp;
++	size_t cmplen;
++	char *name;
++} sqfs_dir_ff_name_t;
++
++static sqfs_err sqfs_dir_ff_name_f(sqfs *fs, sqfs_md_cursor *cur,
++		struct squashfs_dir_index *index, short *stop, void *arg) {
++	sqfs_err err;
++	sqfs_dir_ff_name_t *args = (sqfs_dir_ff_name_t*)arg;
++	size_t name_size = index->size + 1;
++	int order;
++
++	if ((err = sqfs_md_read(fs, cur, args->name, name_size)))
++		return err;
++	args->name[name_size] = '\0';
++	
++	order = strncmp(args->name, args->cmp, args->cmplen);
++	if (order > 0 || (order == 0 && name_size > args->cmplen))
++		*stop = 1;
++	
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_dir_lookup(sqfs *fs, sqfs_inode *inode,
++		const char *name, size_t namelen, sqfs_dir_entry *entry, short *found) {
++	sqfs_err err;
++	sqfs_dir dir;
++	sqfs_dir_ff_name_t arg;
++
++	*found = 0;
++
++	if ((err = sqfs_dir_open(fs, inode, &dir, 0)))
++		return err;
++	
++	/* Fast forward to header */
++	arg.cmp = name;
++	arg.cmplen = namelen;
++	arg.name = entry->name;
++	if ((err = sqfs_dir_ff_header(fs, inode, &dir, sqfs_dir_ff_name_f, &arg)))
++		return err;
++	
++	/* Iterate to find the right entry */
++	while (sqfs_dir_next(fs, &dir, entry, &err)) {
++		int order = strncmp(sqfs_dentry_name(entry), name, namelen);
++		if (order == 0 && sqfs_dentry_name_size(entry) == namelen)
++			*found = 1;
++		if (order >= 0)
++			break;
++	}
++	
++	return err;
++}
++
++static sqfs_err clear_dot_dot(char *path)
++{
++	char *dot_dot, *dot_dot_left;
++	
++	// we might get a path like /a/b/../../c/d
++	// in which case we need to interpret dot-dot's
++	while ((dot_dot = strstr(path, "/../"))) {
++		dot_dot_left = dot_dot - 1;
++		do {
++			if (dot_dot_left < path) {
++				return SQFS_ERR;
++			}
++			if ('/' == *dot_dot_left) {
++				break;
++			}
++			--dot_dot_left;
++		} while (1);
++		memmove(dot_dot_left, dot_dot + 3, strlen(dot_dot + 3) + 1);
++	}
++	// what about /a/b/c/d/..
++	if (strlen(path) >= 3 && 0 == strcmp(path + strlen(path) - 3, "/..")) {
++		dot_dot_left = path + strlen(path) - 4;
++		do {
++			if (dot_dot_left < path) {
++				return SQFS_ERR;
++			}
++			if ('/' == *dot_dot_left) {
++				break;
++			}
++			--dot_dot_left;
++		} while (1);
++		*dot_dot_left = '\0';
++	}
++	return SQFS_OK;
++}
++
++sqfs_err squash_follow_link(sqfs *fs, const char *path, sqfs_inode *node) {
++
++	sqfs_err error;
++	short found;
++	char base_path[SQUASHFS_PATH_LEN];
++	char new_path[SQUASHFS_PATH_LEN];
++	int inode_num;
++
++	if(strlen(path) > SQUASHFS_PATH_LEN){
++		errno = ENAMETOOLONG;
++		return SQFS_ERR;
++	}
++
++	strncpy(base_path, path, SQUASHFS_PATH_LEN);
++	inode_num = 0;
++	do {
++		char buf_link[SQUASHFS_PATH_LEN]; // is enough for path?
++		ssize_t link_length = squash_readlink_inode(fs, node, buf_link, sizeof(buf_link));
++		if (link_length > 0) {
++			if (buf_link[0] == '/') { // is Absolute Path
++				// find node from /
++				error = sqfs_inode_get(fs, node, sqfs_inode_root(fs));
++				if (SQFS_OK != error) {
++					return error;
++				}
++				error = sqfs_lookup_path(fs, node, buf_link, &found);
++				strncpy(new_path, buf_link, SQUASHFS_PATH_LEN);
++				if (SQFS_OK != error) {
++					return error;
++				} else if (!found) {
++					errno = ENOENT;
++					return SQFS_ERR;
++				}
++			} else { // is Relative Path
++				size_t pos = strlen(base_path) - 1;
++				// find the last /  "/a/b/cb"
++				while (base_path[pos--] != '/') { }
++
++				memcpy(new_path, base_path, pos + 2);
++				memcpy(new_path + pos + 2, buf_link, link_length);
++				new_path[pos + 2 + link_length] = '\0';
++				
++				error = clear_dot_dot(new_path);
++				if (SQFS_OK != error) {
++					errno = ENOENT;
++					return SQFS_ERR;
++				}
++				
++				// find node from /
++				error = sqfs_inode_get(fs, node, sqfs_inode_root(fs));
++				if (SQFS_OK != error) {
++					return error;
++				}
++				error = sqfs_lookup_path(fs, node, new_path, &found);
++				if (SQFS_OK != error) {
++					return error;
++				} else if (!found) {
++					errno = ENOENT;
++					return SQFS_ERR;
++				}
++			}
++
++			inode_num++;
++			if (inode_num > SQUASHFS_MAX_LINK_LEVEL) {
++				errno = ELOOP;
++				return SQFS_ERR;
++			}
++			strncpy(base_path, new_path, SQUASHFS_PATH_LEN);
++
++		} else {
++			return SQFS_ERR;
++		}
++
++
++	} while (S_ISLNK(node->base.mode));
++
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_lookup_path_inner(sqfs *fs, sqfs_inode *inode, const char *incoming_path,
++		short *found, short follow_link) {
++	sqfs_err err, ret;
++	sqfs_name buf;
++	sqfs_path path_here;
++	sqfs_dir_entry entry;
++	char *path, *path0;
++	short is_last_component;
++	memset(&buf, 0, sizeof(sqfs_name));
++	memset(&entry, 0, sizeof(sqfs_dir_entry));
++
++	*found = 0;
++	sqfs_dentry_init(&entry, buf);
++
++	path = strdup(incoming_path);
++	if (NULL == path) {
++		return SQFS_ERR;
++	}
++	path0 = path;
++
++	err = clear_dot_dot(path);
++	if (SQFS_OK != err) {
++		ret = SQFS_OK; /* not found */
++		goto exit;
++	}
++	
++	while (*path) {
++		const char *name;
++		size_t size;
++		
++		/* Find next path component */
++		while (*path == '/') /* skip leading slashes */
++			++path;
++		
++		name = path;
++		while (*path && *path != '/')
++			++path;
++		size = path - name;
++		if (0 == size) {
++			/* we're done */
++			break;
++		}
++		if (1 == size && '.' == *name) {
++			/* interpret dot */
++			continue;
++		}
++		if ((err = sqfs_dir_lookup(fs, inode, name, size, &entry, found))) {
++			ret = err;
++			goto exit;
++		}
++		if (!(*found)) {
++			ret = SQFS_OK; /* not found */
++			goto exit;
++		}
++		if ((err = sqfs_inode_get(fs, inode, sqfs_dentry_inode(&entry)))) {
++			ret = err;
++			goto exit;
++		}
++		if (!*path) {
++			is_last_component = 1;
++		} else if (path0 + strlen(path0) - 1 == path) {
++			assert('/' == *path);
++			is_last_component = 1;
++		} else {
++			is_last_component = 0;
++		}
++
++		if (S_ISLNK(inode->base.mode)) {
++			if (!(is_last_component && !follow_link)) {
++				size_t size_here = path - path0;
++				if (size_here > SQUASHFS_PATH_LEN) {
++					size_here = SQUASHFS_PATH_LEN;
++				}
++				memcpy(path_here, path0, size_here);
++				path_here[size_here] = '\0';
++				err = squash_follow_link(fs, path_here, inode);
++				if (SQFS_OK != err) {
++					ret = err;
++					goto exit;
++				}
++			}
++		}
++	}
++	
++	*found = 1;
++	ret = SQFS_OK;
++exit:
++	free(path0);
++	return ret;
++}
++
++sqfs_err sqfs_lookup_path(sqfs *fs, sqfs_inode *inode, const char *path,
++		short *found) {
++	return sqfs_lookup_path_inner(fs, inode, path, found, 0);
++}
+diff --git a/ruby/squash_dirent.c b/ruby/squash_dirent.c
+new file mode 100644
+index 00000000..2a9d9fd1
+--- /dev/null
++++ b/ruby/squash_dirent.c
+@@ -0,0 +1,215 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++#include <stdlib.h>
++
++#include <assert.h>
++
++SQUASH_DIR *squash_opendir_inner(sqfs *fs, const char *filename, short follow_link)
++{
++	sqfs_err error;
++	short found;
++	SQUASH_DIR *dir = calloc(1, sizeof(SQUASH_DIR));
++	int *handle;
++	
++	if (NULL == dir)
++	{
++		errno = ENOMEM;
++		return NULL;
++	}
++	dir->fs = fs;
++	dir->entries = NULL;
++	dir->nr = 0;
++	dir->filename = strdup(filename);
++	dir->fd = squash_open(fs, filename);
++	if (-1 == dir->fd)
++	{
++		goto failure;
++	}
++	handle = (int *)(squash_global_fdtable.fds[dir->fd]->payload);
++
++	MUTEX_LOCK(&squash_global_mutex);
++	free(handle);
++	squash_global_fdtable.fds[dir->fd]->payload = (void *)dir;
++	MUTEX_UNLOCK(&squash_global_mutex);
++
++	dir->actual_nr = 0;
++	dir->loc = 0;
++	error = sqfs_inode_get(fs, &dir->node, sqfs_inode_root(fs));
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	error = sqfs_lookup_path_inner(fs, &dir->node, filename, &found, follow_link);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	if (!found)
++	{
++		errno = ENOENT;
++		goto failure;
++	}
++	error = sqfs_dir_open(fs, &dir->node, &dir->dir, 0);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	return dir;
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	free(dir);
++	return NULL;
++}
++
++SQUASH_DIR *squash_opendir(sqfs *fs, const char *filename)
++{
++        return squash_opendir_inner(fs, filename, 1);
++}
++
++int squash_closedir(SQUASH_DIR *dirp)
++{
++	int ret;
++
++	assert(-1 != dirp->fd);
++	free(dirp->entries);
++	free(dirp->filename);
++	if (dirp->payload) {
++		free(dirp->payload);
++	}
++	// dirp itself will be freed by squash_close as `payload`
++	ret = squash_close(dirp->fd);
++	if (0 != ret) {
++		if (!errno) {
++			errno = EBADF;
++		}
++		return -1;
++	}
++	return 0;
++}
++
++struct SQUASH_DIRENT * squash_readdir(SQUASH_DIR *dirp)
++{
++	sqfs_err error;
++	size_t nr = dirp->loc + 1;
++	if (dirp->nr < nr) {
++		// we secretly extend the requested size
++		// in order to minimize the number of realloc calls
++		nr *= 10;
++		dirp->entries = realloc(dirp->entries, nr * sizeof(*dirp->entries));
++		if (NULL == dirp->entries)
++		{
++			errno = ENOMEM;
++			return NULL;
++		}
++		dirp->nr = nr;
++	}
++
++	while (dirp->actual_nr < dirp->loc + 1)
++	{
++		sqfs_dentry_init(&dirp->entries[dirp->actual_nr].entry,
++			dirp->entries[dirp->actual_nr].name);
++		dirp->entries[dirp->actual_nr].not_eof = sqfs_dir_next(
++			dirp->fs,
++			&dirp->dir,
++			&dirp->entries[dirp->actual_nr].entry,
++			&error);
++		if (SQFS_OK != error)
++		{
++			return NULL;
++		}
++		else if (!dirp->entries[dirp->actual_nr].not_eof)
++		{
++			return NULL;
++		}
++		else {
++			sqfs_dir_entry *entry = &dirp->entries[dirp->actual_nr].entry;
++			struct SQUASH_DIRENT *sysentry = &dirp->entries[dirp->actual_nr].sysentry;
++			size_t minsize;
++			
++			sysentry->d_ino = entry->inode_number;
++			minsize = entry->name_size;
++			if (SQUASHFS_NAME_LEN < minsize) {
++				minsize = SQUASHFS_NAME_LEN;
++			}
++			if (sizeof(sysentry->d_name) < minsize) {
++				minsize = sizeof(sysentry->d_name);
++			}
++			memcpy(sysentry->d_name, dirp->entries[dirp->actual_nr].name, minsize);
++#ifndef __linux__
++			sysentry->d_namlen = minsize;
++#endif
++			sysentry->d_name[minsize] = '\0';
++			// TODO special treatment of L types
++			switch (entry->type)
++			{	
++			case SQUASHFS_DIR_TYPE:
++			case SQUASHFS_LDIR_TYPE:
++				sysentry->d_type = DT_DIR;
++				break;
++			case SQUASHFS_REG_TYPE:
++			case SQUASHFS_LREG_TYPE:
++				sysentry->d_type = DT_REG;
++				break;
++			case SQUASHFS_SYMLINK_TYPE:
++			case SQUASHFS_LSYMLINK_TYPE:
++				sysentry->d_type = DT_LNK;
++				break;
++			case SQUASHFS_BLKDEV_TYPE:
++			case SQUASHFS_LBLKDEV_TYPE:
++				sysentry->d_type = DT_BLK;
++				break;
++			case SQUASHFS_CHRDEV_TYPE:
++			case SQUASHFS_LCHRDEV_TYPE:
++				sysentry->d_type = DT_CHR;
++				break;
++			case SQUASHFS_FIFO_TYPE:
++			case SQUASHFS_LFIFO_TYPE:
++				sysentry->d_type = DT_FIFO;
++				break;
++			case SQUASHFS_SOCKET_TYPE:
++			case SQUASHFS_LSOCKET_TYPE:
++				sysentry->d_type = DT_SOCK;
++				break;
++			default:
++				sysentry->d_type = DT_UNKNOWN;
++				break;
++			}
++			dirp->actual_nr += 1;
++		}
++	}
++	if (!dirp->entries[dirp->loc].not_eof)
++	{
++		return NULL;
++	}
++	dirp->loc += 1;
++	return &dirp->entries[dirp->loc - 1].sysentry;
++}
++
++long squash_telldir(SQUASH_DIR *dirp)
++{
++	return dirp->loc;
++}
++
++void squash_seekdir(SQUASH_DIR *dirp, long loc)
++{
++	dirp->loc = loc;
++}
++
++void squash_rewinddir(SQUASH_DIR *dirp)
++{
++	dirp->loc = 0;
++}
++
++int squash_dirfd(SQUASH_DIR *dirp)
++{
++	return dirp->fd;
++}
+diff --git a/ruby/squash_extract.c b/ruby/squash_extract.c
+new file mode 100644
+index 00000000..acd8ce6c
+--- /dev/null
++++ b/ruby/squash_extract.c
+@@ -0,0 +1,265 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++#include <time.h>
++#include <stdlib.h>
++
++#ifdef _WIN32
++#include <Windows.h>
++#include <Shlwapi.h>
++SQUASH_OS_PATH squash_tmpdir()
++{
++	const int squash_win32_buf_sz = 32767;
++	wchar_t squash_win32_buf[32767 + 1];
++	DWORD length;
++
++	length = GetEnvironmentVariableW(L"TEMP", squash_win32_buf, squash_win32_buf_sz);
++	if (length) {
++		goto out;
++	}
++	length = GetEnvironmentVariableW(L"TMP", squash_win32_buf, squash_win32_buf_sz);
++	if (length) {
++		goto out;
++	}
++	length = GetEnvironmentVariableW(L"SystemRoot", squash_win32_buf, squash_win32_buf_sz);
++	if (!length) {
++		length = GetEnvironmentVariableW(L"windir", squash_win32_buf, squash_win32_buf_sz);
++	}
++	if (length) {
++		if (length + 5 >= squash_win32_buf_sz) {
++			return NULL;
++		}
++		squash_win32_buf[length] = L'\\';
++		squash_win32_buf[length + 1] = L't';
++		squash_win32_buf[length + 2] = L'e';
++		squash_win32_buf[length + 3] = L'm';
++		squash_win32_buf[length + 4] = L'p';
++		squash_win32_buf[length + 5] = 0;
++		length += 5;
++		goto out;
++	}
++	return NULL;
++out:
++	if (length >= 2 && L'\\' == squash_win32_buf[length - 1] && L':' != squash_win32_buf[length - 2]) {
++		squash_win32_buf[length - 1] = 0;
++		length -= 1;
++	}
++	return wcsdup(squash_win32_buf);
++}
++SQUASH_OS_PATH squash_tmpf(SQUASH_OS_PATH tmpdir, const char *ext_name)
++{
++	const int squash_win32_buf_sz = 32767;
++	wchar_t squash_win32_buf[32767 + 1];
++	size_t curlen, size_ret;
++	int ret, try_cnt = 0;
++	srand(time(NULL) * getpid());
++	squash_win32_buf[squash_win32_buf_sz] = 0;
++	while (try_cnt < 3) {
++		squash_win32_buf[0] = 0;
++		assert(0 == wcslen(squash_win32_buf));
++		wcsncat(squash_win32_buf + wcslen(squash_win32_buf), tmpdir, squash_win32_buf_sz - wcslen(squash_win32_buf));
++		wcsncat(squash_win32_buf + wcslen(squash_win32_buf), L"\\libsquash-", squash_win32_buf_sz - wcslen(squash_win32_buf));
++		// up to 33 characters for _itoa
++		if (squash_win32_buf_sz - wcslen(squash_win32_buf) <= 33) {
++			return NULL;
++		}
++		_itow(rand(), squash_win32_buf + wcslen(squash_win32_buf), 10);
++		if (ext_name) {
++			wcsncat(squash_win32_buf + wcslen(squash_win32_buf), L".", squash_win32_buf_sz - wcslen(squash_win32_buf));
++		}
++		if (ext_name) {
++			curlen = wcslen(squash_win32_buf);
++			size_ret = mbstowcs((wchar_t*)(squash_win32_buf) + curlen, ext_name, squash_win32_buf_sz - curlen);
++			if ((size_t)-1 == size_ret) {
++				return NULL;
++			}
++			*((wchar_t*)(squash_win32_buf) + curlen + size_ret) = 0;
++		}
++		if (!PathFileExistsW(squash_win32_buf)) {
++			return wcsdup(squash_win32_buf);
++		}
++		++try_cnt;
++	}
++	return NULL;
++}
++#else // _WIN32
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++SQUASH_OS_PATH squash_tmpdir()
++{
++	char *try_try;
++	size_t length;
++	try_try = getenv("TMPDIR");
++	if (try_try) {
++		goto out;
++	}
++	try_try = getenv("TMP");
++	if (try_try) {
++		goto out;
++	}
++	try_try = getenv("TEMP");
++	if (try_try) {
++		goto out;
++	}
++	try_try = "/tmp";
++out:
++	try_try = strdup(try_try);
++	length = strlen(try_try);
++	if (length >= 2 && '/' == try_try[length - 1]) {
++		try_try[length - 1] = 0;
++	}
++	return try_try;
++}
++SQUASH_OS_PATH squash_tmpf(SQUASH_OS_PATH tmpdir, const char *ext_name)
++{
++	const int squash_buf_sz = 32767;
++	char squash_buf[squash_buf_sz + 1];
++	int ret, try_cnt = 0;
++	struct stat statbuf;
++
++	srand(time(NULL) * getpid());
++	while (try_cnt < 3) {
++		if (ext_name) {
++			ret = snprintf(squash_buf, squash_buf_sz, "%s/libsquash-%d.%s", tmpdir, rand(), ext_name);
++		} else {
++			ret = snprintf(squash_buf, squash_buf_sz, "%s/libsquash-%d", tmpdir, rand());
++		}
++		if (-1 == ret) {
++			return NULL;
++		}
++		if (-1 == stat(squash_buf, &statbuf)) {
++			return strdup(squash_buf);
++		}
++		++try_cnt;
++	}
++	return NULL;
++}
++#endif // _WIN32
++
++static SQUASH_OS_PATH squash_uncached_extract(sqfs *fs, const char *path, const char *ext_name)
++{
++	static SQUASH_OS_PATH tmpdir = NULL;
++	FILE *fp;
++	int fd;
++	SQUASH_OS_PATH tmpf;
++	size_t size;
++	ssize_t ssize;
++	char buffer[16 * 1024];
++	sqfs_off_t offset;
++	struct squash_file *file;
++
++	fd = squash_open(fs, path);
++	if (-1 == fd) {
++		return NULL;
++	}
++	if (NULL == tmpdir) {
++		tmpdir = squash_tmpdir();
++	}
++	if (NULL == tmpdir) {
++		return NULL;
++	}
++	tmpf = squash_tmpf(tmpdir, ext_name);
++	if (NULL == tmpf) {
++		return NULL;
++	}
++#ifdef _WIN32
++	fp = _wfopen(tmpf, L"wb");
++#else
++	fp = fopen(tmpf, "wb");
++#endif
++	if (NULL == fp) {
++		free(tmpf);
++		return NULL;
++	}
++	file = SQUASH_VFD_FILE(fd);
++	offset = file->node.xtra.reg.file_size;
++	while (offset > 0) {
++		ssize = squash_read(fd, buffer, 16 * 1024);
++		if (ssize <= 0) {
++			fclose(fp);
++			free(tmpf);
++			return NULL;
++		}
++		offset -= ssize;
++		size = fwrite(buffer, ssize, 1, fp);
++		if (size != 1) {
++			fclose(fp);
++			free(tmpf);
++			return NULL;
++		}
++	}
++	assert(0 == offset);
++	fclose(fp);
++	return tmpf;
++}
++
++struct SquashExtractEntry {
++	sqfs *fs;
++	const char *path;
++	SQUASH_OS_PATH ret;
++	struct SquashExtractEntry *next;
++};
++
++static struct SquashExtractEntry* squash_extract_cache = NULL;
++
++static const struct SquashExtractEntry* squash_extract_cache_find(sqfs *fs, const char *path)
++{
++	struct SquashExtractEntry* ptr = squash_extract_cache;
++	while (NULL != ptr) {
++		if (fs == ptr->fs && 0 == strcmp(path, ptr->path)) {
++			return ptr;
++		}
++		ptr = ptr->next;
++	}
++	return ptr;
++}
++static void squash_extract_cache_insert(sqfs *fs, const char *path, SQUASH_OS_PATH ret)
++{
++	struct SquashExtractEntry* ptr = malloc(sizeof(struct SquashExtractEntry));
++	if (NULL == ptr) {
++		return;
++	}
++	ptr->fs = fs;
++	ptr->path = path;
++	ptr->ret = ret;
++	ptr->next = squash_extract_cache;
++	squash_extract_cache = ptr;
++}
++
++SQUASH_OS_PATH squash_extract(sqfs *fs, const char *path, const char *ext_name)
++{
++	SQUASH_OS_PATH ret;
++	static struct SquashExtractEntry* found;
++
++	found = squash_extract_cache_find(fs, path);
++	if (NULL != found) {
++		return found->ret;
++	}
++	ret = squash_uncached_extract(fs, path, ext_name);
++	if (NULL != ret) {
++		squash_extract_cache_insert(fs, path, ret);
++	}
++	return ret;
++}
++
++void squash_extract_clear_cache()
++{
++	struct SquashExtractEntry* ptr = squash_extract_cache;
++	while (NULL != ptr) {
++#ifdef _WIN32
++		DeleteFileW(ptr->ret);
++#else
++		unlink(ptr->ret);
++#endif
++		ptr = ptr->next;
++	}
++}
+diff --git a/ruby/squash_fd.c b/ruby/squash_fd.c
+new file mode 100644
+index 00000000..44139e70
+--- /dev/null
++++ b/ruby/squash_fd.c
+@@ -0,0 +1,233 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++#include <stdlib.h>
++
++struct squash_fdtable squash_global_fdtable;
++MUTEX squash_global_mutex;
++
++int squash_open_inner(sqfs *fs, const char *path, short follow_link)
++{
++	sqfs_err error;
++	struct squash_file *file = calloc(1, sizeof(struct squash_file));
++	short found;
++	int fd;
++	size_t nr;
++	int *handle;
++
++	// try locating the file and fetching its stat
++	if (NULL == file)
++	{
++		errno = ENOMEM;
++		return -1;
++	}
++	error = sqfs_inode_get(fs, &file->node, sqfs_inode_root(fs));
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	error = sqfs_lookup_path_inner(fs, &file->node, path, &found, follow_link);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	if (!found)
++	{
++		errno = ENOENT;
++		goto failure;
++	}
++	error = sqfs_stat(fs, &file->node, &file->st);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	file->fs = fs;
++	file->pos = 0;
++
++	// get a dummy fd from the system
++	fd = dup(0);
++	if (-1 == fd) {
++		goto failure;
++	}
++	// make sure that our global fd table is large enough
++	nr = fd + 1;
++
++	MUTEX_LOCK(&squash_global_mutex);
++	if (squash_global_fdtable.nr < nr)
++	{
++		// we secretly extend the requested size
++		// in order to minimize the number of realloc calls
++		nr *= 10;
++		squash_global_fdtable.fds = realloc(squash_global_fdtable.fds,
++						    nr * sizeof(struct squash_file *));
++		if (NULL == squash_global_fdtable.fds)
++		{
++			errno = ENOMEM;
++			goto failure;
++		}
++		memset(squash_global_fdtable.fds + squash_global_fdtable.nr,
++		       0,
++		       (nr - squash_global_fdtable.nr) * sizeof(struct squash_file *));
++		squash_global_fdtable.nr = nr;
++	}
++	MUTEX_UNLOCK(&squash_global_mutex);
++
++	// construct a handle (mainly) for win32
++	handle = (int *)malloc(sizeof(int));
++	if (NULL == handle) {
++		errno = ENOMEM;
++		goto failure;
++	}
++	*handle = fd;
++	file->payload = (void *)handle;
++
++	// insert the fd into the global fd table
++	file->fd = fd;
++	MUTEX_LOCK(&squash_global_mutex);
++	squash_global_fdtable.fds[fd] = file;
++        if (squash_global_fdtable.end < fd + 1) {
++        	squash_global_fdtable.end = fd + 1;
++        }
++	MUTEX_UNLOCK(&squash_global_mutex);
++	return fd;
++
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	free(file);
++	return -1;
++}
++
++int squash_open(sqfs *fs, const char *path)
++{
++        return squash_open_inner(fs, path, 1);
++}
++
++int squash_close(int vfd)
++{
++	int ret;
++        if (!SQUASH_VALID_VFD(vfd)) {
++                errno = EBADF;
++                return -1;
++        }
++        ret = close(vfd);
++	if (-1 == ret) {
++		return -1;
++	}
++        MUTEX_LOCK(&squash_global_mutex);
++        if (S_ISDIR(squash_global_fdtable.fds[vfd]->st.st_mode)) {
++                SQUASH_DIR *dir = (SQUASH_DIR *) (squash_global_fdtable.fds[vfd]->payload);
++                free(dir);
++        } else {
++                int *handle = (int *) (squash_global_fdtable.fds[vfd]->payload);
++                free(handle);
++        }
++        free(squash_global_fdtable.fds[vfd]);
++        squash_global_fdtable.fds[vfd] = NULL;
++        if (vfd + 1 == squash_global_fdtable.end) {
++                while (vfd >= 0 && NULL == squash_global_fdtable.fds[vfd]) {
++                        vfd -= 1;
++                }
++                squash_global_fdtable.end = vfd + 1;
++        } else {
++                assert(squash_global_fdtable.end > vfd + 1);
++        }
++        MUTEX_UNLOCK(&squash_global_mutex);
++        return 0;
++}
++
++ssize_t squash_read(int vfd, void *buf, sqfs_off_t nbyte)
++{
++	sqfs_err error;
++	struct squash_file *file;
++
++	if (!SQUASH_VALID_VFD(vfd))
++	{
++		errno = EBADF;
++		goto failure;
++	}
++	file = squash_global_fdtable.fds[vfd];
++
++	error = sqfs_read_range(file->fs, &file->node, file->pos, &nbyte, buf);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	file->pos += nbyte;
++	return nbyte;
++failure:
++	if (!errno) {
++		errno = EBADF;
++	}
++	return -1;
++}
++
++off_t squash_lseek(int vfd, off_t offset, int whence)
++{
++	struct squash_file *file;
++	if (!SQUASH_VALID_VFD(vfd))
++	{
++		errno = EBADF;
++		return -1;
++	}
++	file = squash_global_fdtable.fds[vfd];
++	if (SQUASH_SEEK_SET == whence)
++	{
++		file->pos = offset;
++	}
++	else if (SQUASH_SEEK_CUR == whence)
++	{
++		file->pos += offset;
++	}
++	else if (SQUASH_SEEK_END == whence)
++	{
++		assert(S_ISREG(file->node.base.mode));
++		file->pos = file->node.xtra.reg.file_size;
++	}
++	return file->pos;
++}
++
++static void squash_halt()
++{
++	if (squash_global_fdtable.fds) {
++		free(squash_global_fdtable.fds);
++	}
++	MUTEX_DESTORY(&squash_global_mutex);
++	squash_extract_clear_cache();
++}
++
++sqfs_err squash_start()
++{
++	int ret;
++	squash_global_fdtable.nr = 0;
++	squash_global_fdtable.fds = NULL;
++	MUTEX_INIT(&squash_global_mutex);
++	ret = atexit(squash_halt);
++	if (0 == ret) {
++		return SQFS_OK;
++	} else {
++		return SQFS_ERR;
++	}
++}
++
++struct squash_file * squash_find_entry(void *ptr)
++{
++	size_t i;
++	struct squash_file * ret = NULL;
++	MUTEX_LOCK(&squash_global_mutex);
++	for (i = 0; i < squash_global_fdtable.end; ++i) {
++		if (squash_global_fdtable.fds[i] && ptr == squash_global_fdtable.fds[i]->payload) {
++			ret = squash_global_fdtable.fds[i];
++			break;
++		}
++	}
++	MUTEX_UNLOCK(&squash_global_mutex);
++	return ret;
++}
+diff --git a/ruby/squash_file.c b/ruby/squash_file.c
+new file mode 100644
+index 00000000..d680b5fc
+--- /dev/null
++++ b/ruby/squash_file.c
+@@ -0,0 +1,329 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/file.h"
++
++#include "squash/fs.h"
++
++#include <stdlib.h>
++#include <string.h>
++
++sqfs_err sqfs_frag_entry(sqfs *fs, struct squashfs_fragment_entry *frag,
++		uint32_t idx) {
++	sqfs_err err = SQFS_OK;
++	
++	if (idx == SQUASHFS_INVALID_FRAG)
++		return SQFS_ERR;
++	
++	err = sqfs_table_get(&fs->frag_table, fs, idx, frag);
++	return err;
++}
++
++sqfs_err sqfs_frag_block(sqfs *fs, sqfs_inode *inode,
++		size_t *offset, size_t *size, sqfs_block **block) {
++	struct squashfs_fragment_entry frag;
++	sqfs_err err = SQFS_OK;
++	
++	if (!S_ISREG(inode->base.mode))
++		return SQFS_ERR;
++	
++	err = sqfs_frag_entry(fs, &frag, inode->xtra.reg.frag_idx);
++	if (err)
++		return err;
++	
++	err = sqfs_data_cache(fs, &fs->frag_cache, frag.start_block,
++		frag.size, block);
++	if (err)
++		return SQFS_ERR;
++	
++	*offset = inode->xtra.reg.frag_off;
++	*size = inode->xtra.reg.file_size % fs->sb->block_size;
++	return SQFS_OK;
++}
++
++size_t sqfs_blocklist_count(sqfs *fs, sqfs_inode *inode) {
++	uint64_t size = inode->xtra.reg.file_size;
++	size_t block = fs->sb->block_size;
++	if (inode->xtra.reg.frag_idx == SQUASHFS_INVALID_FRAG) {
++		return sqfs_divceil(size, block);
++	} else {
++		return (size_t)(size / block);
++	}
++}
++
++void sqfs_blocklist_init(sqfs *fs, sqfs_inode *inode, sqfs_blocklist *bl) {
++	bl->fs = fs;
++	bl->remain = sqfs_blocklist_count(fs, inode);
++	bl->cur = inode->next;
++	bl->started = 0;
++	bl->pos = 0;
++	bl->block = inode->xtra.reg.start_block;
++	bl->input_size = 0;
++}
++
++sqfs_err sqfs_blocklist_next(sqfs_blocklist *bl) {
++	sqfs_err err = SQFS_OK;
++	short compressed;
++	
++	if (bl->remain == 0)
++		return SQFS_ERR;
++	--(bl->remain);
++	
++	err = sqfs_md_read(bl->fs, &bl->cur, &bl->header,
++		sizeof(bl->header));
++	if (err)
++		return err;
++	
++	bl->block += bl->input_size;
++	sqfs_data_header(bl->header, &compressed, &bl->input_size);
++	
++	if (bl->started)
++		bl->pos += bl->fs->sb->block_size;
++	bl->started = 1;
++	
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_read_range(sqfs *fs, sqfs_inode *inode, sqfs_off_t start,
++		sqfs_off_t *size, void *buf) {
++	sqfs_err err = SQFS_OK;
++	
++	sqfs_off_t file_size;
++	size_t block_size;
++	sqfs_blocklist bl;
++	
++	size_t read_off;
++	char *buf_orig;
++	
++	if (!S_ISREG(inode->base.mode))
++		return SQFS_ERR;
++	
++	file_size = inode->xtra.reg.file_size;
++	block_size = fs->sb->block_size;
++	
++	if (*size < 0 || start > file_size)
++		return SQFS_ERR;
++	if (start == file_size) {
++		*size = 0;
++		return SQFS_OK;
++	}
++	
++	err = sqfs_blockidx_blocklist(fs, inode, &bl, start);
++	if (err)
++		return err;
++	
++	read_off = start % block_size;
++	buf_orig = buf;
++	while (*size > 0) {
++		sqfs_block *block = NULL;
++		size_t data_off, data_size;
++		size_t take;
++		
++		short fragment = (bl.remain == 0);
++		if (fragment) { /* fragment */
++			if (inode->xtra.reg.frag_idx == SQUASHFS_INVALID_FRAG)
++				break;
++			err = sqfs_frag_block(fs, inode, &data_off, &data_size, &block);
++			if (err)
++				return err;
++		} else {			
++			if ((err = sqfs_blocklist_next(&bl)))
++				return err;
++			if (bl.pos + block_size <= start)
++				continue;
++			
++			data_off = 0;
++			if (bl.input_size == 0) { /* Hole! */
++				data_size = (size_t)(file_size - bl.pos);
++				if (data_size > block_size)
++					data_size = block_size;
++			} else {
++				err = sqfs_data_cache(fs, &fs->data_cache, bl.block,
++					bl.header, &block);
++				if (err)
++					return err;
++				data_size = block->size;
++			}
++		}
++		
++		take = data_size - read_off;
++		if (take > *size)
++			take = (size_t)(*size);
++		if (block) {
++			memcpy(buf, (char*)block->data + data_off + read_off, take);
++			/* BLOCK CACHED, DON'T DISPOSE */
++		} else {
++			memset(buf, 0, take);
++		}
++		read_off = 0;
++		*size -= take;
++		buf = (char*)buf + take;
++		
++		if (fragment)
++			break;
++	}
++	
++	*size = (char*)buf - buf_orig;
++	return *size ? SQFS_OK : SQFS_ERR;
++}
++
++
++/*
++To read block N of a M-block file, we have to read N blocksizes from the,
++metadata. This is a lot of work for large files! So for those files, we use
++an index to speed it up.
++
++The M blocksizes are split between M / SQUASHFS_METADATA_SIZE MD-blocks.
++For each of these blocks, we maintain in the index the location of the
++MD-block, and the location of the data block corresponding to the start
++of that MD-block.
++
++Then to read block N, we just calculate which metadata block index
++("metablock") we want, and get that block-index entry. Then we
++only need to read that one MD-block to seek within the file.
++*/
++
++/* Is a file worth indexing? */
++static short sqfs_blockidx_indexable(sqfs *fs, sqfs_inode *inode) {
++	size_t blocks = sqfs_blocklist_count(fs, inode);
++	size_t md_size = blocks * sizeof(sqfs_blocklist_entry);
++	return md_size >= SQUASHFS_METADATA_SIZE;
++}
++
++static void sqfs_blockidx_dispose(void *data) {
++	free(*(sqfs_blockidx_entry**)data);
++}
++
++sqfs_err sqfs_blockidx_init(sqfs_cache *cache) {
++	return sqfs_cache_init(cache, sizeof(sqfs_blockidx_entry**),
++		SQUASHFS_META_SLOTS, &sqfs_blockidx_dispose);
++}
++
++/* Fill *out with all the block-index entries for this file */
++static sqfs_err sqfs_blockidx_add(sqfs *fs, sqfs_inode *inode,
++		sqfs_blockidx_entry **out) {
++	size_t blocks;	/* Number of blocks in the file */
++	size_t md_size; /* Amount of metadata necessary to hold the blocksizes */
++	size_t count; 	/* Number of block-index entries necessary */
++	
++	sqfs_blockidx_entry *blockidx;
++	sqfs_blocklist bl;
++	
++	/* For the cache */
++	sqfs_cache_idx idx;
++	sqfs_blockidx_entry **cachep;
++
++	size_t i = 0;
++	short first = 1;
++	
++	*out = NULL;
++	
++	blocks = sqfs_blocklist_count(fs, inode);
++	md_size = blocks * sizeof(sqfs_blocklist_entry);
++	count = (inode->next.offset + md_size - 1)
++		/ SQUASHFS_METADATA_SIZE;
++	blockidx = malloc(count * sizeof(sqfs_blockidx_entry));
++	if (!blockidx)
++		return SQFS_ERR;
++	
++	sqfs_blocklist_init(fs, inode, &bl);
++	while (bl.remain && i < count) {
++		sqfs_err err = SQFS_OK;
++		/* If the MD cursor offset is small, we found a new MD-block.
++		 * Skip the first MD-block, because we already know where it is:
++		 * inode->next.offset */
++		if (bl.cur.offset < sizeof(sqfs_blocklist_entry) && !first) {
++			blockidx[i].data_block = bl.block + bl.input_size;
++			blockidx[i++].md_block = (uint32_t)(bl.cur.block - fs->sb->inode_table_start);
++		}
++		first = 0;
++		
++		err = sqfs_blocklist_next(&bl);
++		if (err) {
++			free(blockidx);
++			return SQFS_ERR;
++		}
++	}
++
++	idx = inode->base.inode_number + 1; /* zero means invalid */
++	cachep = sqfs_cache_add(&fs->blockidx, idx);
++	*out = *cachep = blockidx;
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_blockidx_blocklist(sqfs *fs, sqfs_inode *inode, sqfs_blocklist *bl, sqfs_off_t start) {
++	size_t block, metablock, skipped;
++	sqfs_blockidx_entry *blockidx, **bp;
++	sqfs_cache_idx idx;
++	sqfs_err ret;
++
++	MUTEX_LOCK(&fs->blockidx.mutex);
++
++	sqfs_blocklist_init(fs, inode, bl);
++	block = (size_t)(start / fs->sb->block_size);
++	if (block > bl->remain) { /* fragment */
++		bl->remain = 0;
++		ret = SQFS_OK;
++		goto exit;
++	}
++	
++	/* How many MD-blocks do we want to skip? */
++	metablock = (bl->cur.offset + block * sizeof(sqfs_blocklist_entry))
++		/ SQUASHFS_METADATA_SIZE;
++	if (metablock == 0) {
++		ret = SQFS_OK; /* no skip needed, don't want an index */
++		goto exit;
++	}
++	if (!sqfs_blockidx_indexable(fs, inode)) {
++		ret = SQFS_OK; /* too small to index */
++		goto exit;
++	}
++	
++	/* Get the index, creating it if necessary */
++	idx = inode->base.inode_number + 1; /* zero means invalid index */
++	if ((bp = sqfs_cache_get(&fs->blockidx, idx))) {
++		blockidx = *bp;
++	} else {
++		ret = sqfs_blockidx_add(fs, inode, &blockidx);
++		if (ret) {
++			goto exit;
++		}
++	}
++	
++	skipped = (metablock * SQUASHFS_METADATA_SIZE / sizeof(sqfs_blocklist_entry))
++		- (bl->cur.offset / sizeof(sqfs_blocklist_entry));
++	
++	blockidx += metablock - 1;
++	bl->cur.block = blockidx->md_block + fs->sb->inode_table_start;
++	bl->cur.offset %= sizeof(sqfs_blocklist_entry);
++	bl->remain -= skipped;
++	bl->pos = (uint64_t)skipped * fs->sb->block_size;
++	bl->block = blockidx->data_block;
++	ret = SQFS_OK;
++
++exit:
++	MUTEX_UNLOCK(&fs->blockidx.mutex);
++	return ret;
++}
++
+diff --git a/ruby/squash_fs.c b/ruby/squash_fs.c
+new file mode 100644
+index 00000000..d51ea265
+--- /dev/null
++++ b/ruby/squash_fs.c
+@@ -0,0 +1,434 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/fs.h"
++
++#include "squash/file.h"
++
++
++#include <stdlib.h>
++#include <string.h>
++
++
++
++#define DATA_CACHED_BLKS 1
++#define FRAG_CACHED_BLKS 3
++
++void sqfs_version_supported(int *min_major, int *min_minor, int *max_major,
++		int *max_minor) {
++	*min_major = *max_major = SQUASHFS_MAJOR;
++	*min_minor = 0;
++	*max_minor = SQUASHFS_MINOR;
++}
++
++void sqfs_version(sqfs *fs, int *major, int *minor) {
++	*major = fs->sb->s_major;
++	*minor = fs->sb->s_minor;
++}
++
++sqfs_compression_type sqfs_compression(sqfs *fs) {
++	return fs->sb->compression;
++}
++
++sqfs_err sqfs_init(sqfs *fs, sqfs_fd_t fd, size_t offset) {
++	sqfs_err err;
++	memset(fs, 0, sizeof(*fs));
++	
++	fs->fd = fd;
++	fs->offset = offset;
++
++	fs->sb = (struct squashfs_super_block *)(fd + fs->offset);
++	
++	if (fs->sb->s_magic != SQUASHFS_MAGIC) {
++		return SQFS_BADFORMAT;
++	}
++	if (fs->sb->s_major != SQUASHFS_MAJOR || fs->sb->s_minor > SQUASHFS_MINOR)
++		return SQFS_BADVERSION;
++	
++	if (!(fs->decompressor = sqfs_decompressor_get(fs->sb->compression)))
++		return SQFS_BADCOMP;
++	
++	err = sqfs_table_init(&fs->id_table, fd, fs->sb->id_table_start + fs->offset,
++		sizeof(uint32_t), fs->sb->no_ids);
++	err |= sqfs_table_init(&fs->frag_table, fd, fs->sb->fragment_table_start + fs->offset,
++		sizeof(struct squashfs_fragment_entry), fs->sb->fragments);
++	if (sqfs_export_ok(fs)) {
++		err |= sqfs_table_init(&fs->export_table, fd, fs->sb->lookup_table_start + fs->offset,
++			sizeof(uint64_t), fs->sb->inodes);
++	}
++	err |= sqfs_block_cache_init(&fs->md_cache, SQUASHFS_CACHED_BLKS);
++	err |= sqfs_block_cache_init(&fs->data_cache, DATA_CACHED_BLKS);
++	err |= sqfs_block_cache_init(&fs->frag_cache, FRAG_CACHED_BLKS);
++	err |= sqfs_blockidx_init(&fs->blockidx);
++	if (err) {
++		sqfs_destroy(fs);
++		return SQFS_ERR;
++	}
++	
++	return SQFS_OK;
++}
++
++void sqfs_destroy(sqfs *fs) {
++	sqfs_table_destroy(&fs->id_table);
++	sqfs_table_destroy(&fs->frag_table);
++	if (sqfs_export_ok(fs))
++		sqfs_table_destroy(&fs->export_table);
++	sqfs_cache_destroy(&fs->md_cache);
++	sqfs_cache_destroy(&fs->data_cache);
++	sqfs_cache_destroy(&fs->frag_cache);
++	sqfs_cache_destroy(&fs->blockidx);
++}
++
++void sqfs_md_header(uint16_t hdr, short *compressed, uint16_t *size) {
++	*compressed = !(hdr & SQUASHFS_COMPRESSED_BIT);
++	*size = hdr & ~SQUASHFS_COMPRESSED_BIT;
++	if (!*size)
++		*size = SQUASHFS_COMPRESSED_BIT;
++}
++
++void sqfs_data_header(uint32_t hdr, short *compressed, uint32_t *size) {
++	*compressed = !(hdr & SQUASHFS_COMPRESSED_BIT_BLOCK);
++	*size = hdr & ~SQUASHFS_COMPRESSED_BIT_BLOCK;
++}
++
++sqfs_err sqfs_block_read(sqfs *fs, sqfs_off_t pos, short compressed,
++		uint32_t size, size_t outsize, sqfs_block **block) {
++	sqfs_err err = SQFS_ERR;
++	if (!(*block = malloc(sizeof(**block))))
++		return SQFS_ERR;
++	
++	(*block)->data = (void *)((fs->fd) + (pos + fs->offset));
++	(*block)->data_need_freeing = 0;
++
++	if (compressed) {
++		char *decomp = malloc(outsize);
++		if (!decomp)
++			goto error;
++		
++		err = fs->decompressor((*block)->data, size, decomp, &outsize);
++		if (err) {
++			free(decomp);
++			goto error;
++		}
++		(*block)->data = decomp;
++		(*block)->size = outsize;
++		(*block)->data_need_freeing = 1;
++	} else {
++		(*block)->size = size;
++	}
++
++	return SQFS_OK;
++
++error:
++	sqfs_block_dispose(*block);
++	*block = NULL;
++	return err;
++}
++
++sqfs_err sqfs_md_block_read(sqfs *fs, sqfs_off_t pos, size_t *data_size,
++		sqfs_block **block) {
++	sqfs_err err;
++	uint16_t hdr;
++	short compressed;
++	uint16_t size;
++	
++	*data_size = 0;
++	
++	hdr = *(uint16_t *)(fs->fd + pos + fs->offset);
++	pos += sizeof(hdr);
++	*data_size += sizeof(hdr);
++	
++	sqfs_md_header(hdr, &compressed, &size);
++	
++	err = sqfs_block_read(fs, pos, compressed, size,
++		SQUASHFS_METADATA_SIZE, block);
++	*data_size += size;
++	return err;
++}
++
++sqfs_err sqfs_data_block_read(sqfs *fs, sqfs_off_t pos, uint32_t hdr,
++		sqfs_block **block) {
++	short compressed;
++	uint32_t size;
++	sqfs_data_header(hdr, &compressed, &size);
++	return sqfs_block_read(fs, pos, compressed, size,
++		fs->sb->block_size, block);
++}
++
++sqfs_err sqfs_md_cache(sqfs *fs, sqfs_off_t *pos, sqfs_block **block) {
++	sqfs_block_cache_entry *entry;
++	sqfs_err ret;
++	MUTEX_LOCK(&fs->md_cache.mutex);
++
++	entry = sqfs_cache_get(&fs->md_cache, *pos);
++	if (!entry) {
++		entry = sqfs_cache_add(&fs->md_cache, *pos);
++		ret = sqfs_md_block_read(fs, *pos, &entry->data_size, &entry->block);
++		if (ret) {
++			goto exit;
++		}
++	}
++	*block = entry->block;
++	*pos += entry->data_size;
++	ret = SQFS_OK;
++exit:
++	MUTEX_UNLOCK(&fs->md_cache.mutex);
++	return ret;
++}
++
++sqfs_err sqfs_data_cache(sqfs *fs, sqfs_cache *cache, sqfs_off_t pos,
++		uint32_t hdr, sqfs_block **block) {
++	sqfs_block_cache_entry *entry;
++	sqfs_err ret;
++	MUTEX_LOCK(&cache->mutex);
++
++	entry = sqfs_cache_get(cache, pos);
++	if (!entry) {
++		entry = sqfs_cache_add(cache, pos);
++		ret = sqfs_data_block_read(fs, pos, hdr, &entry->block);
++		if (ret) {
++			goto exit;
++		}
++	}
++	*block = entry->block;
++	ret = SQFS_OK;
++exit:
++	MUTEX_UNLOCK(&cache->mutex);
++	return ret;
++}
++
++void sqfs_block_dispose(sqfs_block *block) {
++	if (block->data_need_freeing) {
++		free(block->data);
++	}
++	free(block);
++}
++
++void sqfs_md_cursor_inode(sqfs_md_cursor *cur, sqfs_inode_id id, sqfs_off_t base) {
++	cur->block = (id >> 16) + base;
++	cur->offset = id & 0xffff;
++}
++
++sqfs_err sqfs_md_read(sqfs *fs, sqfs_md_cursor *cur, void *buf, size_t size) {
++	sqfs_off_t pos = cur->block;
++	while (size > 0) {
++		sqfs_block *block;
++		size_t take;
++		sqfs_err err = sqfs_md_cache(fs, &pos, &block);
++		if (err)
++			return err;
++		
++		take = block->size - cur->offset;
++		if (take > size)
++			take = size;
++		if (buf)
++			memcpy(buf, (char*)block->data + cur->offset, take);
++		/* BLOCK CACHED, DON'T DISPOSE */
++		
++		if (buf)
++			buf = (char*)buf + take;
++		size -= take;
++		cur->offset += take;
++		if (cur->offset == block->size) {
++			cur->block = pos;
++			cur->offset = 0;
++		}
++	}
++	return SQFS_OK;
++}
++
++size_t sqfs_divceil(uint64_t total, size_t group) {
++	size_t q = (size_t)(total / group);
++	if (total % group)
++		q += 1;
++	return q;
++}
++
++sqfs_err sqfs_id_get(sqfs *fs, uint16_t idx, sqfs_id_t *id) {
++	uint32_t rid;
++	sqfs_err err = sqfs_table_get(&fs->id_table, fs, idx, &rid);
++	if (err)
++		return err;
++	*id = (sqfs_id_t)rid;
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_readlink(sqfs *fs, sqfs_inode *inode, char *buf, size_t *size) {
++	size_t want;
++	sqfs_md_cursor cur;
++	sqfs_err err;
++	if (!S_ISLNK(inode->base.mode))
++		return SQFS_ERR;
++
++	want = inode->xtra.symlink_size;
++	if (!buf) {
++		*size = want + 1;
++		return SQFS_OK;
++	}
++
++	if (want > *size - 1)
++		want = *size - 1;
++	cur = inode->next;
++	err = sqfs_md_read(fs, &cur, buf, want);
++	buf[want] = '\0';
++	return err;
++}
++
++int sqfs_export_ok(sqfs *fs) {
++	return fs->sb->lookup_table_start != SQUASHFS_INVALID_BLK;
++}
++
++sqfs_err sqfs_export_inode(sqfs *fs, sqfs_inode_num n, sqfs_inode_id *i) {
++	uint64_t r;
++	sqfs_err err;
++	
++	if (!sqfs_export_ok(fs))
++		return SQFS_UNSUP;
++	
++	err = sqfs_table_get(&fs->export_table, fs, n - 1, &r);
++	if (err)
++		return err;
++	*i = r;
++	return SQFS_OK;
++}
++
++sqfs_inode_id sqfs_inode_root(sqfs *fs) {
++	return fs->sb->root_inode;
++}
++
++/* Turn the internal format of a device number to our system's dev_t
++ * It looks like rdev is just what the Linux kernel uses: 20 bit minor,
++ * split in two around a 12 bit major
++ */
++static void sqfs_decode_dev(sqfs_inode *i, uint32_t rdev) {
++	i->xtra.dev.major = (rdev >> 8) & 0xfff;
++	i->xtra.dev.minor = (rdev & 0xff) | ((rdev >> 12) & 0xfff00);
++}
++
++#define INODE_TYPE(_type) \
++	struct squashfs_##_type##_inode x; \
++	err = sqfs_md_read(fs, &inode->next, &x, sizeof(x)); \
++	if (err) return err
++
++sqfs_err sqfs_inode_get(sqfs *fs, sqfs_inode *inode, sqfs_inode_id id) {
++	sqfs_md_cursor cur;
++	sqfs_err err;
++	
++	memset(inode, 0, sizeof(*inode));
++	
++	sqfs_md_cursor_inode(&cur, id, fs->sb->inode_table_start);
++	inode->next = cur;
++	
++	err = sqfs_md_read(fs, &cur, &inode->base, sizeof(inode->base));
++	if (err)
++		return err;
++	
++	inode->base.mode |= sqfs_mode(inode->base.inode_type);
++	switch (inode->base.inode_type) {
++		case SQUASHFS_REG_TYPE: {
++			INODE_TYPE(reg);
++			inode->nlink = 1;
++			inode->xtra.reg.start_block = x.start_block;
++			inode->xtra.reg.file_size = x.file_size;
++			inode->xtra.reg.frag_idx = x.fragment;
++			inode->xtra.reg.frag_off = x.offset;
++			break;
++		}
++		case SQUASHFS_LREG_TYPE: {
++			INODE_TYPE(lreg);
++			inode->nlink = x.nlink;
++			inode->xtra.reg.start_block = x.start_block;
++			inode->xtra.reg.file_size = x.file_size;
++			inode->xtra.reg.frag_idx = x.fragment;
++			inode->xtra.reg.frag_off = x.offset;
++			break;
++		}
++		case SQUASHFS_DIR_TYPE: {
++			INODE_TYPE(dir);
++			inode->nlink = x.nlink;
++			inode->xtra.dir.start_block = x.start_block;
++			inode->xtra.dir.offset = x.offset;
++			inode->xtra.dir.dir_size = x.file_size;
++			inode->xtra.dir.idx_count = 0;
++			inode->xtra.dir.parent_inode = x.parent_inode;
++			break;
++		}
++		case SQUASHFS_LDIR_TYPE: {
++			INODE_TYPE(ldir);
++			inode->nlink = x.nlink;
++			inode->xtra.dir.start_block = x.start_block;
++			inode->xtra.dir.offset = x.offset;
++			inode->xtra.dir.dir_size = x.file_size;
++			inode->xtra.dir.idx_count = x.i_count;
++			inode->xtra.dir.parent_inode = x.parent_inode;
++			break;
++		}
++		case SQUASHFS_SYMLINK_TYPE:
++		case SQUASHFS_LSYMLINK_TYPE: {
++			INODE_TYPE(symlink);
++			inode->nlink = x.nlink;
++			inode->xtra.symlink_size = x.symlink_size;
++			
++			if (inode->base.inode_type == SQUASHFS_LSYMLINK_TYPE) {
++				/* skip symlink target */
++				cur = inode->next;
++				err = sqfs_md_read(fs, &cur, NULL, inode->xtra.symlink_size);
++				if (err)
++					return err;
++			}
++			break;
++		}
++		case SQUASHFS_BLKDEV_TYPE:
++		case SQUASHFS_CHRDEV_TYPE: {
++			INODE_TYPE(dev);
++			inode->nlink = x.nlink;
++			sqfs_decode_dev(inode, x.rdev);
++			break;
++		}
++		case SQUASHFS_LBLKDEV_TYPE:
++		case SQUASHFS_LCHRDEV_TYPE: {
++			INODE_TYPE(ldev);
++			inode->nlink = x.nlink;
++			sqfs_decode_dev(inode, x.rdev);
++			break;
++		}
++		case SQUASHFS_SOCKET_TYPE:
++		case SQUASHFS_FIFO_TYPE: {
++			INODE_TYPE(ipc);
++			inode->nlink = x.nlink;
++			break;
++		}
++		case SQUASHFS_LSOCKET_TYPE:
++		case SQUASHFS_LFIFO_TYPE: {
++			INODE_TYPE(lipc);
++			inode->nlink = x.nlink;
++			break;
++		}
++		
++		default: return SQFS_ERR;
++	}
++	
++	return SQFS_OK;
++}
++#undef INODE_TYPE
+diff --git a/ruby/squash_hash.c b/ruby/squash_hash.c
+new file mode 100644
+index 00000000..2996a24d
+--- /dev/null
++++ b/ruby/squash_hash.c
+@@ -0,0 +1,131 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/hash.h"
++
++#include <stdlib.h>
++#include <string.h>
++
++static sqfs_err sqfs_hash_add_internal(sqfs_hash *h, int doubling,
++		sqfs_hash_key k, sqfs_hash_value v) {
++	size_t hash = (k & (h->capacity - 1));	
++	sqfs_hash_bucket *b = malloc(sizeof(sqfs_hash_bucket) + h->value_size);
++	if (!b)
++		return SQFS_ERR;
++	b->key = k;
++	memcpy(&b->value, v, h->value_size);
++	b->next = h->buckets[hash];
++	h->buckets[hash] = b;
++	++h->size;
++	
++	return SQFS_OK;
++}
++
++static sqfs_err sqfs_hash_double(sqfs_hash *h) {
++	sqfs_hash_bucket **ob = h->buckets;
++	size_t oc = h->capacity;
++	size_t i;
++	sqfs_err err;
++	
++	if ((err = sqfs_hash_init(h, h->value_size, oc * 2)))
++		return err;
++	
++	for (i = 0; i < oc; ++i) {
++		sqfs_hash_bucket *b = ob[i];
++		while (b) {
++			sqfs_hash_bucket *n;
++			if (!err)
++				err = sqfs_hash_add_internal(h, 1, b->key, &b->value);
++			n = b->next;
++			free(b);
++			b = n;
++		}
++	}
++	
++	free(ob);
++	return err;
++}
++
++sqfs_err sqfs_hash_init(sqfs_hash *h, size_t vsize, size_t initial) {
++	memset(h, 0, sizeof(*h));
++	if ((initial & (initial - 1))) /* not power of two? */
++		return SQFS_ERR;
++	
++	h->buckets = calloc(initial, sizeof(sqfs_hash_bucket*));
++	if (!h->buckets)
++		return SQFS_ERR;
++	h->capacity = initial;
++	h->size = 0;
++	h->value_size = vsize;
++	return SQFS_OK;
++}
++ 
++void sqfs_hash_destroy(sqfs_hash *h) {
++	size_t i;
++	for (i = 0; i < h->capacity; ++i) {
++		sqfs_hash_bucket *b = h->buckets[i];
++		while (b) {
++			sqfs_hash_bucket *n = b->next;
++			free(b);
++			b = n;
++		}
++	}
++	free(h->buckets);
++}
++
++sqfs_hash_value sqfs_hash_get(sqfs_hash *h, sqfs_hash_key k) {
++	size_t hash = (k & (h->capacity - 1));
++	sqfs_hash_bucket *b = h->buckets[hash];
++	while (b) {
++		if (b->key == k)
++			return &b->value;
++		b = b->next;
++	}
++	return NULL;
++}
++
++sqfs_err sqfs_hash_add(sqfs_hash *h, sqfs_hash_key k, sqfs_hash_value v) {
++	if (h->size >= h->capacity) {
++		sqfs_err err = sqfs_hash_double(h);
++		if (err)
++			return err;
++	}
++	return sqfs_hash_add_internal(h, 0, k, v);
++}
++
++sqfs_err sqfs_hash_remove(sqfs_hash *h, sqfs_hash_key k) {
++	size_t hash = (k & (h->capacity - 1));
++	sqfs_hash_bucket **bp = &h->buckets[hash];
++	while (*bp) {
++		if ((*bp)->key == k) {
++			sqfs_hash_bucket *b = *bp;
++			*bp = b->next;
++			free(b);
++			--h->size;
++			return SQFS_OK;
++		}
++		bp = &(*bp)->next;
++	}
++	return SQFS_OK;
++}
+diff --git a/ruby/squash_mutex.c b/ruby/squash_mutex.c
+new file mode 100644
+index 00000000..a390b9a1
+--- /dev/null
++++ b/ruby/squash_mutex.c
+@@ -0,0 +1,49 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash/mutex.h"
++
++
++int MUTEX_INIT(MUTEX *mutex)
++{
++
++#ifdef _WIN32
++    *mutex = CreateMutex(0, FALSE, 0);
++    return (*mutex==0);
++#else
++    return pthread_mutex_init(mutex, NULL);
++#endif
++
++}
++
++int MUTEX_LOCK(MUTEX *mutex)
++{
++#ifdef _WIN32
++    return (WaitForSingleObject(*mutex, INFINITE)==WAIT_FAILED?1:0);
++#else
++    return pthread_mutex_lock(mutex);
++#endif
++}
++
++int MUTEX_UNLOCK(MUTEX *mutex)
++{
++#ifdef _WIN32
++    return (ReleaseMutex(*mutex)==0);
++#else
++    return pthread_mutex_unlock(mutex);
++#endif
++}
++
++int MUTEX_DESTORY(MUTEX *mutex)
++{
++#ifdef _WIN32
++    return CloseHandle(*mutex);
++#else
++    return pthread_mutex_destroy(mutex);
++#endif
++}
+diff --git a/ruby/squash_nonstd-makedev.c b/ruby/squash_nonstd-makedev.c
+new file mode 100644
+index 00000000..d5c2d380
+--- /dev/null
++++ b/ruby/squash_nonstd-makedev.c
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <sys/types.h>
++#ifdef __linux__
++	#include <sys/sysmacros.h>
++#endif
++
++#include "squash/common.h"
++
++dev_t sqfs_makedev(int maj, int min) {
++	return makedev(maj, min);
++}
+diff --git a/ruby/squash_nonstd-stat.c b/ruby/squash_nonstd-stat.c
+new file mode 100644
+index 00000000..31552971
+--- /dev/null
++++ b/ruby/squash_nonstd-stat.c
+@@ -0,0 +1,58 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <sys/stat.h>
++
++#include "squash/common.h"
++#include "squash/squashfs_fs.h"
++
++/* S_IF* are not standard */
++sqfs_mode_t sqfs_mode(int inode_type) {
++	switch (inode_type) {
++		case SQUASHFS_DIR_TYPE:
++		case SQUASHFS_LDIR_TYPE:
++			return S_IFDIR;
++		case SQUASHFS_REG_TYPE:
++		case SQUASHFS_LREG_TYPE:
++			return S_IFREG;
++		case SQUASHFS_SYMLINK_TYPE:
++		case SQUASHFS_LSYMLINK_TYPE:
++			return S_IFLNK;
++		case SQUASHFS_BLKDEV_TYPE:
++		case SQUASHFS_LBLKDEV_TYPE:
++			return S_IFBLK;
++		case SQUASHFS_CHRDEV_TYPE:
++		case SQUASHFS_LCHRDEV_TYPE:
++			return S_IFCHR;
++		case SQUASHFS_FIFO_TYPE:
++		case SQUASHFS_LFIFO_TYPE:
++			return S_IFIFO;
++		case SQUASHFS_SOCKET_TYPE:
++		case SQUASHFS_LSOCKET_TYPE:
++			return S_IFSOCK;
++	}
++	return 0;
++}
++
+diff --git a/ruby/squash_private.c b/ruby/squash_private.c
+new file mode 100644
+index 00000000..c87bea1d
+--- /dev/null
++++ b/ruby/squash_private.c
+@@ -0,0 +1,47 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/private.h"
++
++
++#include "squash/nonstd.h"
++
++sqfs_err sqfs_stat(sqfs *fs, sqfs_inode *inode, struct stat *st) {
++	memset(st, 0, sizeof(*st));
++	st->st_mode = inode->base.mode;
++	st->st_nlink = inode->nlink;
++	st->st_mtime = st->st_ctime = st->st_atime = inode->base.mtime;
++	
++	if (S_ISREG(st->st_mode)) {
++		/* FIXME: do symlinks, dirs, etc have a size? */
++		st->st_size = inode->xtra.reg.file_size;
++	} else if (S_ISBLK(st->st_mode) || S_ISCHR(st->st_mode)) {
++		st->st_rdev = sqfs_makedev(inode->xtra.dev.major,
++			inode->xtra.dev.minor);
++	} else if (S_ISLNK(st->st_mode)) {
++		st->st_size = inode->xtra.symlink_size;
++	}
++	
++	return SQFS_OK;
++}
+diff --git a/ruby/squash_readlink.c b/ruby/squash_readlink.c
+new file mode 100644
+index 00000000..4e450e85
+--- /dev/null
++++ b/ruby/squash_readlink.c
+@@ -0,0 +1,85 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++
++ssize_t squash_readlink_inode(sqfs *fs, sqfs_inode *node, char *buf, size_t bufsize) {
++        sqfs_err error;
++        size_t want = 0;
++        sqfs_md_cursor cur;
++
++        if (!S_ISLNK(node->base.mode)) {
++                errno = EINVAL;
++                return -1;
++        }
++
++        want = node->xtra.symlink_size;
++
++        if (want > bufsize - 1) {
++                errno = ENAMETOOLONG;
++                return -1; //bufsize is too small
++        }
++        else if (want == 0) {
++                errno = EBADF;
++                return -1;
++        }
++        cur = node->next;
++        error = sqfs_md_read(fs, &cur, buf, want);
++        if (SQFS_OK != error) {
++                errno = EIO;
++                return -1;
++        }
++        buf[want] = '\0';
++        if (fs->root_alias &&
++            strlen(buf) >= strlen(fs->root_alias) &&
++            buf == strstr(buf, fs->root_alias)) {
++                char *buf_ptr = buf + strlen(fs->root_alias) - 1;
++                assert('/' == buf_ptr[0]); // still is Absolute Path
++                memmove(buf, buf_ptr, strlen(buf_ptr) + 1);
++                want = strlen(buf);
++        } else if (fs->root_alias2 &&
++            strlen(buf) >= strlen(fs->root_alias2) &&
++            buf == strstr(buf, fs->root_alias2)) {
++                char *buf_ptr = buf + strlen(fs->root_alias2) - 1;
++                assert('/' == buf_ptr[0]); // still is Absolute Path
++                memmove(buf, buf_ptr, strlen(buf_ptr) + 1);
++                want = strlen(buf);
++        }
++        return want;
++}
++
++ssize_t squash_readlink(sqfs *fs, const char *path, char *buf, size_t bufsize) {
++    sqfs_err error;
++    sqfs_inode node;
++    short found;
++
++    assert(buf && path && fs);
++    memset(&node, 0, sizeof(sqfs_inode));
++
++    found = 0;
++
++    error = sqfs_inode_get(fs, &node, sqfs_inode_root(fs));
++    if (SQFS_OK != error)
++    	goto failure;
++    error = sqfs_lookup_path(fs, &node, path, &found);
++    if (SQFS_OK != error)
++    	goto failure;
++
++    if (found) {
++        return squash_readlink_inode(fs, &node, buf, bufsize);
++    } else {
++        errno = ENOENT;
++	goto failure;
++    }
++
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	return -1;
++}
+diff --git a/ruby/squash_scandir.c b/ruby/squash_scandir.c
+new file mode 100644
+index 00000000..bb0e0286
+--- /dev/null
++++ b/ruby/squash_scandir.c
+@@ -0,0 +1,66 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++#include <stdlib.h>
++
++
++typedef int(*qsort_compar)(const void *, const void *);
++
++int squash_scandir(sqfs *fs, const char *dirname, struct SQUASH_DIRENT ***namelist,
++	int (*select)(const struct SQUASH_DIRENT *),
++	int (*compar)(const struct SQUASH_DIRENT **, const struct SQUASH_DIRENT **))
++{
++	SQUASH_DIR * openeddir = 0;
++	size_t n = 0;
++	struct SQUASH_DIRENT **list = NULL;
++	struct SQUASH_DIRENT *ent = 0 ,*p = 0;
++
++	if((dirname == NULL) || (namelist == NULL))
++		return -1;
++
++	openeddir = squash_opendir(fs, dirname);
++	if(openeddir == NULL)
++		return -1;
++
++
++	list = (struct SQUASH_DIRENT **)malloc(MAX_DIR_ENT*sizeof(struct SQUASH_DIRENT *));
++
++
++	while(( ent = squash_readdir(openeddir)) != NULL)
++	{
++		if( select && !select(ent))
++			continue;
++
++		p = (struct SQUASH_DIRENT *)malloc(sizeof(struct SQUASH_DIRENT));
++
++		memcpy((void *)p,(void *)ent,sizeof(struct SQUASH_DIRENT));
++		list[n] = p;
++
++		n++;
++		if(n >= MAX_DIR_ENT)
++			break;
++
++	}
++
++	//close the squash_dir
++	squash_closedir(openeddir);
++
++	//realloc the array
++	*namelist = realloc((void *)list,n*sizeof(struct SQUASH_DIRENT *));
++	if(*namelist == NULL)
++		*namelist = list;
++
++
++	//sort the array
++	if(compar)
++		qsort((void *)*namelist,n,sizeof(struct SQUASH_DIRENT *),(qsort_compar)compar);
++
++	return n;
++
++}
+\ No newline at end of file
+diff --git a/ruby/squash_stack.c b/ruby/squash_stack.c
+new file mode 100644
+index 00000000..fe748c39
+--- /dev/null
++++ b/ruby/squash_stack.c
+@@ -0,0 +1,130 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/stack.h"
++
++#include <stdlib.h>
++
++/* Ensure a capacity of cap */
++static sqfs_err sqfs_stack_capacity(sqfs_stack *s, size_t cap) {
++	char *items;
++	if (cap <= s->capacity)
++		return SQFS_OK;
++	
++	items = realloc(s->items, cap * s->value_size);
++	if (!items)
++		return SQFS_ERR;
++	
++	s->items = items;
++	s->capacity = cap;
++	return SQFS_OK;
++}
++
++/* Calculate the next capacity to use */
++#define CAPACITY_DEFAULT 8
++#define CAPACITY_RATIO 3 / 2
++static size_t sqfs_stack_next_capacity(size_t cap) {
++	size_t n;
++	
++	if (cap == 0)
++		return CAPACITY_DEFAULT;
++	
++	n = cap * CAPACITY_RATIO;
++	if (n <= cap)
++		return cap + 1;
++	return n;
++}
++
++/* Grow by one */
++static sqfs_err sqfs_stack_grow(sqfs_stack *s) {
++	if (s->size == s->capacity) {
++		sqfs_err err = sqfs_stack_capacity(s,
++			sqfs_stack_next_capacity(s->capacity));
++		if (err)
++			return err;
++	}
++	s->size++;
++	return SQFS_OK;
++}
++
++
++sqfs_err sqfs_stack_create(sqfs_stack *s, size_t vsize, size_t initial,
++		sqfs_stack_free_t freer) {
++	s->value_size = vsize;
++	s->freer = freer;
++	s->items = NULL;
++	s->capacity = s->size = 0;
++	return sqfs_stack_capacity(s, initial);
++}
++
++void sqfs_stack_init(sqfs_stack *s) {
++	s->items = NULL;
++	s->capacity = 0;
++}
++
++void sqfs_stack_destroy(sqfs_stack *s) {
++	while (sqfs_stack_pop(s))
++		; /* pass */
++	free(s->items);
++	sqfs_stack_init(s);
++}
++
++sqfs_err sqfs_stack_push(sqfs_stack *s, void *vout) {
++	sqfs_err err = sqfs_stack_grow(s);
++	if (err)
++		return err;
++	return sqfs_stack_top(s, vout);
++}
++
++short sqfs_stack_pop(sqfs_stack *s) {
++	void *v;
++	
++	if (s->size == 0)
++		return 0;
++	
++	sqfs_stack_top(s, &v);
++	if (s->freer)
++		s->freer(v);
++	s->size--;
++	return 1;
++}
++
++size_t sqfs_stack_size(sqfs_stack *s) {
++	return s->size;
++}
++
++sqfs_err sqfs_stack_at(sqfs_stack *s, size_t i, void *vout) {
++	if (i >= s->size)
++		return SQFS_ERR;
++	
++	*(void**)vout = s->items + i * s->value_size;
++	return SQFS_OK;
++}
++
++sqfs_err sqfs_stack_top(sqfs_stack *s, void *vout) {
++	if (s->size == 0)
++		return SQFS_ERR;
++	
++	return sqfs_stack_at(s, s->size - 1, vout);
++}
+diff --git a/ruby/squash_stat.c b/ruby/squash_stat.c
+new file mode 100644
+index 00000000..ccab07d2
+--- /dev/null
++++ b/ruby/squash_stat.c
+@@ -0,0 +1,82 @@
++/*
++ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
++ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#include "squash.h"
++
++int squash_stat(sqfs *fs, const char *path, struct stat *buf)
++{
++	sqfs_err error;
++	sqfs_inode node;
++	short found;
++	
++	error = sqfs_inode_get(fs, &node, sqfs_inode_root(fs));
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++	error = sqfs_lookup_path_inner(fs, &node, path, &found, 1);
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++	if (!found) {
++		errno = ENOENT;
++		goto failure;
++	}
++	error = sqfs_stat(fs, &node, buf);
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++
++	return 0;
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	return -1;
++}
++
++int squash_lstat(sqfs *fs, const char *path, struct stat *buf)
++{
++	sqfs_err error;
++	sqfs_inode node;
++	short found;
++
++	error = sqfs_inode_get(fs, &node, sqfs_inode_root(fs));
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++	error = sqfs_lookup_path(fs, &node, path, &found);
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++	if (!found) {
++		errno = ENOENT;
++		goto failure;
++	}
++	error = sqfs_stat(fs, &node, buf);
++	if (SQFS_OK != error) {
++		goto failure;
++	}
++
++	return 0;
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	return -1;
++}
++
++int squash_fstat(int vfd, struct stat *buf)
++{
++	if (!SQUASH_VALID_VFD(vfd))
++	{
++		errno = EBADF;
++		return -1;
++	}
++	*buf = SQUASH_VFD_FILE(vfd)->st;
++	return 0;
++}
+diff --git a/ruby/squash_table.c b/ruby/squash_table.c
+new file mode 100644
+index 00000000..e4fbd5cd
+--- /dev/null
++++ b/ruby/squash_table.c
+@@ -0,0 +1,66 @@
++/*
++ * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/table.h"
++
++#include "squash/fs.h"
++
++#include <string.h>
++
++sqfs_err sqfs_table_init(sqfs_table *table, sqfs_fd_t fd, sqfs_off_t start, size_t each,
++		size_t count) {
++	//size_t nblocks, bread;
++	
++	if (count == 0)
++		return SQFS_OK;
++	
++	//nblocks = sqfs_divceil(each * count, SQUASHFS_METADATA_SIZE);
++
++	//unused
++	//bread = nblocks * sizeof(uint64_t);
++
++	table->each = each;
++	table->blocks = (uint64_t *)(fd + start);
++	
++	return SQFS_OK;
++}
++
++void sqfs_table_destroy(sqfs_table *table) {
++	table->blocks = NULL;
++}
++
++sqfs_err sqfs_table_get(sqfs_table *table, sqfs *fs, size_t idx, void *buf) {
++	sqfs_block *block;
++	size_t pos = idx * table->each;
++	size_t bnum = pos / SQUASHFS_METADATA_SIZE,
++		off = pos % SQUASHFS_METADATA_SIZE;
++	
++	sqfs_off_t bpos = table->blocks[bnum];
++	if (sqfs_md_cache(fs, &bpos, &block))
++		return SQFS_ERR;
++	
++	memcpy(buf, (char*)(block->data) + off, table->each);
++	/* BLOCK CACHED, DON'T DISPOSE */
++	return SQFS_OK;
++}
+diff --git a/ruby/squash_traverse.c b/ruby/squash_traverse.c
+new file mode 100644
+index 00000000..012d98b9
+--- /dev/null
++++ b/ruby/squash_traverse.c
+@@ -0,0 +1,322 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/traverse.h"
++
++#include "squash/fs.h"
++
++#include <stdlib.h>
++#include <string.h>
++
++
++#define TRAVERSE_PATH_SEPARATOR "/"
++
++/* Default initial capacity of trv.path */
++#define TRAVERSE_DEFAULT_PATH_CAP 32
++
++
++enum {
++	/* These states may be set on entry to sqfs_traverse_next(), with real
++	   work to do. */
++	TRAVERSE_DESCEND,		 	/* Descend into the current entry (a dir) */
++	TRAVERSE_NAME_REMOVE, /* Remove the name from the end of the stored path */
++	
++	/* End states */
++	TRAVERSE_ERROR,
++	TRAVERSE_FINISHED,
++	
++	/* Internal */
++	TRAVERSE_ASCEND,			/* Done with a directory, ascend a level */
++	TRAVERSE_NAME_ADD,		/* Add a name to the end of the stored path */
++	TRAVERSE_GET_ENTRY		/* Get the next entry at the same level */
++} sqfs_traverse_state;
++
++/* The struct stored in trv.stack */
++typedef struct {
++	sqfs_dir dir;
++	size_t name_size;
++} sqfs_traverse_level;
++
++
++/* Make our structure safe */
++static void sqfs_traverse_init(sqfs_traverse *trv);
++
++/* Path manipulation functions */
++static sqfs_err sqfs_traverse_path_init(sqfs_traverse *trv);
++static sqfs_err sqfs_traverse_path_add(sqfs_traverse *trv,
++	const char *str, size_t size);
++static sqfs_err sqfs_traverse_path_add_name(sqfs_traverse *trv);
++static sqfs_err sqfs_traverse_path_add_sep(sqfs_traverse *trv);
++static void sqfs_traverse_path_remove(sqfs_traverse *trv, size_t size);
++static void sqfs_traverse_path_remove_name(sqfs_traverse *trv);
++static void sqfs_traverse_path_remove_sep(sqfs_traverse *trv);
++/* Set the size of the last path component */
++static void sqfs_traverse_path_set_name_size(sqfs_traverse *trv, size_t size);
++/* Add nul-terminator */
++static void sqfs_traverse_path_terminate(sqfs_traverse *trv);
++
++/* Descend into new directories, and ascend back */
++static sqfs_err sqfs_traverse_descend_inode(sqfs_traverse *trv,
++	sqfs_inode *inode);
++static sqfs_err sqfs_traverse_descend(sqfs_traverse *trv, sqfs_inode_id iid);
++static sqfs_err sqfs_traverse_ascend(sqfs_traverse *trv);
++
++
++static void sqfs_traverse_init(sqfs_traverse *trv) {
++	sqfs_dentry_init(&trv->entry, trv->namebuf);
++	sqfs_stack_init(&trv->stack);
++	trv->state = TRAVERSE_ERROR;
++	trv->path = NULL;
++}
++
++sqfs_err sqfs_traverse_open_inode(sqfs_traverse *trv, sqfs *fs,
++		sqfs_inode *inode) {
++	sqfs_err err;
++	
++	sqfs_traverse_init(trv);	
++	if ((err = sqfs_traverse_path_init(trv)))
++		goto error;
++	err = sqfs_stack_create(&trv->stack, sizeof(sqfs_traverse_level), 0, NULL);
++	if (err)
++		goto error;
++	
++	trv->fs = fs;
++	if ((err = sqfs_traverse_descend_inode(trv, inode)))
++		goto error;
++	
++	sqfs_traverse_path_set_name_size(trv, 0); /* The root has no name */
++	trv->state = TRAVERSE_NAME_REMOVE;
++	return SQFS_OK;
++	
++error:
++	sqfs_traverse_close(trv);
++	return err;
++}
++
++sqfs_err sqfs_traverse_open(sqfs_traverse *trv, sqfs *fs, sqfs_inode_id iid) {
++	sqfs_err err;
++	sqfs_inode inode;
++	
++	if ((err = sqfs_inode_get(fs, &inode, iid)))
++		return err;
++	
++	return sqfs_traverse_open_inode(trv, fs, &inode);
++}
++
++void sqfs_traverse_close(sqfs_traverse *trv) {
++	sqfs_stack_destroy(&trv->stack);
++	free(trv->path);
++	sqfs_traverse_init(trv);
++}
++
++
++short sqfs_traverse_next(sqfs_traverse *trv, sqfs_err *err) {
++	sqfs_traverse_level *level;
++	short found;
++	
++	*err = SQFS_OK;
++	while (1) {
++		switch (trv->state) {
++			case TRAVERSE_GET_ENTRY:
++				if ((*err = sqfs_stack_top(&trv->stack, &level)))
++					goto error;
++				
++				found = sqfs_dir_next(trv->fs, &level->dir, &trv->entry, err);
++				if (*err)
++					goto error;
++				if (found)
++					trv->state = TRAVERSE_NAME_ADD;
++				else
++					trv->state = TRAVERSE_ASCEND;
++				break;
++			
++			case TRAVERSE_NAME_ADD:
++				if ((*err = sqfs_traverse_path_add_name(trv)))
++					goto error;
++				if (sqfs_dentry_is_dir(&trv->entry))
++					trv->state = TRAVERSE_DESCEND;
++				else
++					trv->state = TRAVERSE_NAME_REMOVE;
++				trv->dir_end = 0;
++				return 1;
++			
++			case TRAVERSE_NAME_REMOVE:
++				sqfs_traverse_path_remove_name(trv);
++				trv->state = TRAVERSE_GET_ENTRY;
++				break;
++			
++			case TRAVERSE_DESCEND:
++				*err = sqfs_traverse_descend(trv, sqfs_dentry_inode(&trv->entry));
++				if (*err)
++					goto error;
++				trv->state = TRAVERSE_GET_ENTRY;
++				break;
++			
++			case TRAVERSE_ASCEND:
++				if ((*err = sqfs_traverse_ascend(trv)))
++					goto error;
++				if (sqfs_stack_size(&trv->stack) > 0) {
++					trv->dir_end = 1;
++					trv->state = TRAVERSE_NAME_REMOVE;
++					return 1;
++				}
++				trv->state = TRAVERSE_FINISHED;
++				break;
++			
++			case TRAVERSE_FINISHED:
++				return 0;
++			
++			case TRAVERSE_ERROR:
++				*err = SQFS_ERR;
++				goto error;
++		}
++	}
++	
++error:
++	trv->state = TRAVERSE_ERROR;
++	return 0;
++}
++
++sqfs_err sqfs_traverse_prune(sqfs_traverse *trv) {
++	trv->state = TRAVERSE_NAME_REMOVE;
++	return SQFS_OK;
++}
++
++
++static sqfs_err sqfs_traverse_path_init(sqfs_traverse *trv) {
++	trv->path_cap = TRAVERSE_DEFAULT_PATH_CAP;
++	if (!(trv->path = malloc(trv->path_cap)))
++		return SQFS_ERR;
++	trv->path[0] = '\0';
++	trv->path_size = 1; /* includes nul-terminator */
++	return SQFS_OK;
++}
++
++static void sqfs_traverse_path_terminate(sqfs_traverse *trv) {
++	trv->path[trv->path_size - 1] = '\0';
++}
++
++static sqfs_err sqfs_traverse_path_add(sqfs_traverse *trv,
++		const char *str, size_t size) {
++	size_t need = trv->path_size + size;
++	if (need > trv->path_cap) {
++		char *next_path;
++		size_t next_cap = trv->path_cap;
++		while (need > next_cap)
++			next_cap *= 2;
++		
++		if (!(next_path = realloc(trv->path, next_cap)))
++			return SQFS_ERR;
++		
++		trv->path = next_path;
++		trv->path_cap = next_cap;
++	}
++	
++	memcpy(trv->path + trv->path_size - 1, str, size);
++	trv->path_size = need;
++	sqfs_traverse_path_terminate(trv);
++	return SQFS_OK;
++}
++
++static void sqfs_traverse_path_remove(sqfs_traverse *trv, size_t size) {
++	if (trv->path_size > size)
++		trv->path_size -= size;
++	else
++		trv->path_size = 1; /* only nul terminator left */
++	
++	sqfs_traverse_path_terminate(trv);
++}
++
++static sqfs_err sqfs_traverse_path_add_name(sqfs_traverse *trv) {
++	trv->path_last_size = sqfs_dentry_name_size(&trv->entry);
++	return sqfs_traverse_path_add(trv, sqfs_dentry_name(&trv->entry),
++		trv->path_last_size);
++}
++
++static sqfs_err sqfs_traverse_path_add_sep(sqfs_traverse *trv) {
++	return sqfs_traverse_path_add(trv, TRAVERSE_PATH_SEPARATOR,
++		strlen(TRAVERSE_PATH_SEPARATOR));
++}
++
++static void sqfs_traverse_path_remove_name(sqfs_traverse *trv) {
++	sqfs_traverse_path_remove(trv, trv->path_last_size);
++}
++
++static void sqfs_traverse_path_remove_sep(sqfs_traverse *trv) {
++	sqfs_traverse_path_remove(trv, strlen(TRAVERSE_PATH_SEPARATOR));
++}
++
++static void sqfs_traverse_path_set_name_size(sqfs_traverse *trv, size_t size) {
++	trv->path_last_size = size;
++}
++
++
++static sqfs_err sqfs_traverse_descend_inode(sqfs_traverse *trv,
++		sqfs_inode *inode) {
++	sqfs_err err;
++	sqfs_traverse_level *level;
++	short initial;
++	
++	initial = (sqfs_stack_size(&trv->stack) == 0);
++	
++	if ((err = sqfs_stack_push(&trv->stack, &level)))
++		return err;	
++	if ((err = sqfs_dir_open(trv->fs, inode, &level->dir, 0)))
++		return err;
++	
++	if (initial) {
++		/* Don't add the separator or store the size for the root directory */
++		level->name_size = 0;
++	} else {
++		level->name_size = sqfs_dentry_name_size(&trv->entry);
++		if ((err = sqfs_traverse_path_add_sep(trv)))
++			return err;
++	}
++	
++	return err;
++}
++
++static sqfs_err sqfs_traverse_descend(sqfs_traverse *trv, sqfs_inode_id iid) {
++	sqfs_err err;
++	sqfs_inode inode;
++	
++	if ((err = sqfs_inode_get(trv->fs, &inode, iid)))
++		return err;
++	
++	return sqfs_traverse_descend_inode(trv, &inode);
++}
++
++static sqfs_err sqfs_traverse_ascend(sqfs_traverse *trv) {
++	sqfs_err err;
++	sqfs_traverse_level *level;
++	
++	if ((err = sqfs_stack_top(&trv->stack, &level)))
++		return err;
++	
++	sqfs_traverse_path_remove_sep(trv); /* safe even if initial */
++	sqfs_traverse_path_set_name_size(trv, level->name_size);
++	
++	sqfs_stack_pop(&trv->stack);
++	return SQFS_OK;
++}
+diff --git a/ruby/squash_util.c b/ruby/squash_util.c
+new file mode 100644
+index 00000000..ebccdb97
+--- /dev/null
++++ b/ruby/squash_util.c
+@@ -0,0 +1,84 @@
++/*
++ * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++#include "squash/util.h"
++
++#include "squash/fs.h"
++
++#include <stdio.h>
++
++sqfs_err sqfs_fd_open(const uint8_t *path, sqfs_fd_t *fd) {
++	*fd = path;
++	return SQFS_OK;
++}
++
++void sqfs_fd_close(sqfs_fd_t fd) {
++  // do nothing
++}
++
++
++/* TODO: WIN32 implementation of open/close */
++/* TODO: i18n of error messages */
++sqfs_err sqfs_open_image(sqfs *fs, const uint8_t *image, size_t offset) {
++	sqfs_err err;
++	sqfs_fd_t fd;
++
++	if ((err = sqfs_fd_open(image, &fd)))
++		return err;
++
++	err = sqfs_init(fs, fd, offset);
++	switch (err) {
++		case SQFS_OK:
++			break;
++		case SQFS_BADFORMAT:
++			fprintf(stderr, "This doesn't look like a squashfs image.\n");
++			break;
++		case SQFS_BADVERSION: {
++			int major, minor, mj1, mn1, mj2, mn2;
++			sqfs_version(fs, &major, &minor);
++			sqfs_version_supported(&mj1, &mn1, &mj2, &mn2);
++			fprintf(stderr, "Squashfs version %d.%d detected, only version",
++				major, minor);
++			if (mj1 == mj2 && mn1 == mn2)
++				fprintf(stderr, " %d.%d", mj1, mn1);
++			else
++				fprintf(stderr, "s %d.%d to %d.%d", mj1, mn1, mj2, mn2);
++			fprintf(stderr, " supported.\n");
++			break;
++		}
++		case SQFS_BADCOMP: {
++			fprintf(stderr, "Squashfs image uses ? compression");
++			fprintf(stderr, ".\n");
++			break;
++		}
++		default:
++			fprintf(stderr, "Something went wrong trying to read the squashfs "
++				"image.\n");
++	}
++
++	if (err)
++		sqfs_fd_close(fd);
++	return err;
++}
++
+-- 
+2.24.3 (Apple Git-128)
+
