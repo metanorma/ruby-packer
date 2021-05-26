@@ -7,3 +7,8 @@
 /ruby-compiler/
 /a.exe
 /a.out
+
+/.build/
+/ruby/
+/rubyc-linux-x64
+/rubyc-darwin-x64

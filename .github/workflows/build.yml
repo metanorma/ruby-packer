@@ -12,6 +12,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - run: make
+
     - run: sudo bin/build-linux.sh
 
     - run: |
@@ -35,6 +37,8 @@ jobs:
         perl-version: '5.16.2'
 
     - run: brew install squashfs
+
+    - run: make
 
     - run: bin/build-macos.sh
 
