@@ -11,7 +11,6 @@
 - Works on Linux, Mac and Windows
 - Creates a binary distribution of your application
 - Supports natively any form of `require` and `load`, including dynamic ones (e.g. `load(my_path + 'x.rb'`)
-- Features zero-config auto-update capabilities to make your compiled project to stay updated
 - Native C extensions are fully supported
 - Rails applications are fully supported
 - Open Source, MIT Licensed
@@ -93,8 +92,6 @@ ENTRANCE can be either a file path, or a "x" string as in bundle exec "x".
           --keep-tmpdir                Keeps all temporary files that were generated last time
           --make-args=ARGS             Extra arguments to be passed to make
           --nmake-args=ARGS            Extra arguments to be passed to nmake
-          --auto-update-url=URL        Enables auto-update and specifies the URL to get the latest version
-          --auto-update-base=STRING    Enables auto-update and specifies the base version string
           --debug                      Enable debug mode
       -v, --version                    Prints the version of rubyc and exit
           --ruby-version               Prints the version of the Ruby runtime and exit
@@ -138,4 +135,3 @@ ENTRANCE can be either a file path, or a "x" string as in bundle exec "x".
 ## See Also
 
 - [Libsquash](https://github.com/pmq20/libsquash): portable, user-land SquashFS that can be easily linked and embedded within your application.
-- [Libautoupdate](https://github.com/pmq20/libautoupdate): cross-platform C library to enable your application to auto-update itself in place.
