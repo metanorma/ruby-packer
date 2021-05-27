@@ -196,11 +196,6 @@ jobs:
         ignore-errors: [ false ]
         test-flavor:
           - iso
-        include:
-          # macos-11.0 looks not working
-          - test-flavor: iso
-            ignore-errors: true
-            os: macos-11.0
     steps:
       - uses: actions/checkout@v2
         with:

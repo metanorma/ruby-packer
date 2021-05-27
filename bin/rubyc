@@ -101,14 +101,6 @@ OptionParser.new do |opts|
     options[:gem_version] = ver
   end
 
-  opts.on("--auto-update-url=URL", "Enables auto-update and specifies the URL to get the latest version") do |url|
-    options[:auto_update_url] = url
-  end
-
-  opts.on("--auto-update-base=STRING", "Enables auto-update and specifies the base version string") do |string|
-    options[:auto_update_base] = string
-  end
-
   opts.on("--debug", "Enable debug mode") do
     options[:debug] = true
   end

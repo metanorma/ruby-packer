@@ -1,9 +1,6 @@
 .PHONY: all clean
 
-all: rubyc-linux-x64
-
-rubyc-linux-x64: ruby
-	#./bin/build-linux.sh
+all: clean-binary ruby
 
 ruby: .build/ruby.tar.gz
 	tar xzf .build/ruby.tar.gz
@@ -14,5 +11,13 @@ ruby: .build/ruby.tar.gz
 	mkdir -p .build
 	curl -L https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.4.tar.gz > .build/ruby.tar.gz
 
-clean:
-	rm -rvf .build ruby rubyc-linux-x64
+clean: clean-archive clean-source clean-binary
+
+clean-archive:
+	rm -rvf .build
+
+clean-source:
+	rm -rvf ruby
+
+clean-binary:
+	rm -vf rubyc-linux-x64

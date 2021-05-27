@@ -1,7 +1,7 @@
-From 705a77119b97a1e5030b9200ac8db868683ac83f Mon Sep 17 00:00:00 2001
+From 8a5fdd55a2528c8bca7406421ae3eaa23a98b681 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 20:05:44 +0300
-Subject: [PATCH] enclose io patch
+Subject: [PATCH 6/7] enclose io usage
 
 ---
  ruby/dir.c                        | 21 ++++++++--
@@ -12,12 +12,11 @@ Subject: [PATCH] enclose io patch
  ruby/lib/rubygems/path_support.rb | 16 ++++++++
  ruby/prelude.c                    | 56 +++++++++++++++++++++++++
  ruby/process.c                    | 68 +++++++++++++++++++++++++++++++
- ruby/ruby.c                       |  4 ++
  ruby/tool/mkconfig.rb             | 16 ++++++++
  ruby/util.c                       |  4 ++
  ruby/win32/file.c                 |  4 ++
  ruby/win32/win32.c                | 40 ++++++++++++++++++
- 13 files changed, 247 insertions(+), 3 deletions(-)
+ 12 files changed, 243 insertions(+), 3 deletions(-)
 
 diff --git a/ruby/dir.c b/ruby/dir.c
 index 41a0f247..8dbf9d99 100644
@@ -353,21 +352,6 @@ index c9ef25ae..560d5e5a 100644
 +	MUTEX_UNLOCK(&squash_global_mutex);
 +}
 +// --------- [Enclose.IO Hack end] ---------
-diff --git a/ruby/ruby.c b/ruby/ruby.c
-index b35e2a4b..5b171fc5 100644
---- a/ruby/ruby.c
-+++ b/ruby/ruby.c
-@@ -2165,6 +2165,10 @@ ruby_prog_init(void)
-     rb_define_hooked_variable("$PROGRAM_NAME", &rb_progname, 0, set_arg0);
- 
-     rb_define_module_function(rb_mProcess, "argv0", proc_argv0, 0);
-+// --------- [Enclose.IO Hack start] ---------
-+	VALUE enclose_io_execpath(VALUE process);
-+	rb_define_module_function(rb_mProcess, "enclose_io_execpath", enclose_io_execpath, 0);
-+// --------- [Enclose.IO Hack end] ---------
-     rb_define_module_function(rb_mProcess, "setproctitle", proc_setproctitle, 1);
- 
-     /*
 diff --git a/ruby/tool/mkconfig.rb b/ruby/tool/mkconfig.rb
 index 372e0868..b28a56ce 100755
 --- a/ruby/tool/mkconfig.rb

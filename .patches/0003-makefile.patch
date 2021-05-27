@@ -1,7 +1,7 @@
-From a4e52990f85d351c27d71ae59bcbd58340695f63 Mon Sep 17 00:00:00 2001
+From 79b25710cf86e90df0b1ecd92ff9fb6362664dbf Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:34:49 +0300
-Subject: [PATCH 4/9] Makefile
+Subject: [PATCH 3/7] makefile
 
 ---
  ruby/Makefile.in        |  6 +++---
@@ -11,7 +11,7 @@ Subject: [PATCH 4/9] Makefile
  4 files changed, 48 insertions(+), 11 deletions(-)
 
 diff --git a/ruby/Makefile.in b/ruby/Makefile.in
-index 52618232..0d07262c 100644
+index 14413b69..5ce4d784 100644
 --- a/ruby/Makefile.in
 +++ b/ruby/Makefile.in
 @@ -218,12 +218,12 @@ all:
@@ -53,7 +53,7 @@ index 04f751d7..c40fe1cb 100644
  headers = {
    "libc" => ["ndbm.h"], # 4.3BSD original ndbm, Berkeley DB 1 in 4.4BSD libc.
 diff --git a/ruby/lib/mkmf.rb b/ruby/lib/mkmf.rb
-index 999ffaa3..c2e98dc3 100644
+index 533f3f85..ac94b061 100644
 --- a/ruby/lib/mkmf.rb
 +++ b/ruby/lib/mkmf.rb
 @@ -2675,17 +2675,17 @@ def MAIN_DOES_NOTHING(*refs)
