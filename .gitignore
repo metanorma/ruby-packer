@@ -7,6 +7,7 @@
 /ruby-compiler/
 /a.exe
 /a.out
+/.bundle/
 
 /.build/
 /ruby/
