@@ -51,38 +51,38 @@ index 095c19c4..94c69262 100644
 +	assert(SQFS_OK == enclose_io_ret);
 +
 +#ifdef _WIN32
-+	if (NULL == getenv("ENCLOSE_IO_USE_ORIGINAL_RUBY")) {
-+#ifdef ENCLOSE_IO_ENV_BUNDLE_GEMFILE
-+		bool_ret = SetEnvironmentVariable("BUNDLE_GEMFILE", ENCLOSE_IO_ENV_BUNDLE_GEMFILE);
++	if (NULL == getenv("RUBY_PACKER_USE_ORIGINAL_RUBY")) {
++#ifdef RUBY_PACKER_ENV_BUNDLE_GEMFILE
++		bool_ret = SetEnvironmentVariable("BUNDLE_GEMFILE", RUBY_PACKER_ENV_BUNDLE_GEMFILE);
 +		assert(0 != bool_ret);
-+#endif // ENCLOSE_IO_ENV_BUNDLE_GEMFILE
-+#ifdef ENCLOSE_IO_RAILS
++#endif // RUBY_PACKER_ENV_BUNDLE_GEMFILE
++#ifdef RUBY_PACKER_RAILS
 +		assert(NULL == mkdir_workdir);
 +		enclose_io_mkdir_scope = "/__enclose_io_memfs__/local";
-+		bool_ret = SetEnvironmentVariable("ENCLOSE_IO_RAILS", "1");
++		bool_ret = SetEnvironmentVariable("RUBY_PACKER_RAILS", "1");
 +		assert(0 != bool_ret);
-+#endif // ENCLOSE_IO_RAILS
++#endif // RUBY_PACKER_RAILS
 +	}
 +#else // ifdef _WIN32 -----------------------------------------------
-+#ifdef ENCLOSE_IO_ENTRANCE
++#ifdef RUBY_PACKER_ENTRANCE
 +	new_argc = argc;
 +	new_argv = argv;
 +	argv_memory = NULL;
-+	if (NULL == getenv("ENCLOSE_IO_USE_ORIGINAL_RUBY")) {
-+#ifdef ENCLOSE_IO_ENV_BUNDLE_GEMFILE
-+		ret = setenv("BUNDLE_GEMFILE", ENCLOSE_IO_ENV_BUNDLE_GEMFILE, 1);
++	if (NULL == getenv("RUBY_PACKER_USE_ORIGINAL_RUBY")) {
++#ifdef RUBY_PACKER_ENV_BUNDLE_GEMFILE
++		ret = setenv("BUNDLE_GEMFILE", RUBY_PACKER_ENV_BUNDLE_GEMFILE, 1);
 +		assert(0 == ret);
-+#endif // ENCLOSE_IO_ENV_BUNDLE_GEMFILE
-+#ifdef ENCLOSE_IO_RAILS
++#endif // RUBY_PACKER_ENV_BUNDLE_GEMFILE
++#ifdef RUBY_PACKER_RAILS
 +		assert(NULL == mkdir_workdir);
 +		enclose_io_mkdir_scope = "/__enclose_io_memfs__/local";
-+		ret = setenv("ENCLOSE_IO_RAILS", "1", 1);
++		ret = setenv("RUBY_PACKER_RAILS", "1", 1);
 +		assert(0 == ret);
-+#endif // ENCLOSE_IO_RAILS
++#endif // RUBY_PACKER_RAILS
 +		new_argv = (char **)malloc( (argc + 1) * sizeof(char *));
 +		assert(new_argv);
 +		new_argv[0] = argv[0];
-+		new_argv[1] = ENCLOSE_IO_ENTRANCE;
++		new_argv[1] = RUBY_PACKER_ENTRANCE;
 +		for (i = 1; i < argc; ++i) {
 +			new_argv[2 + i - 1] = argv[i];
 +		}
@@ -103,7 +103,7 @@ index 095c19c4..94c69262 100644
 +		argc = new_argc;
 +		argv = new_argv;
 +	}
-+#endif // ENCLOSE_IO_ENTRANCE
++#endif // RUBY_PACKER_ENTRANCE
 +#endif // ifdef _WIN32
 +// --------- [Enclose.io Hack end] ---------
 +
