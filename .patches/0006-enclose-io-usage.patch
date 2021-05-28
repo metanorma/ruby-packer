@@ -125,7 +125,7 @@ index 4becc8e3..2b1c30ce 100644
      lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
      if(lookup == NULL) ossl_raise(eX509StoreError, NULL);
 +    // --------- [Enclose.io Hack start] ---------
-+    #ifdef ENCLOSE_IO_RUBYC_2ND_PASS
++    #ifdef RUBY_PACKER_RUBYC_2ND_PASS
 +      path = enclose_io_ifextract(path, NULL);
 +    #endif
 +    // --------- [Enclose.io Hack end] ---------
@@ -172,7 +172,7 @@ index 618bc793..b2636c90 100644
  
 +    # --------- [Enclose.io Hack start] ---------
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
-+    unless env['ENCLOSE_IO_RUBYC_1ST_PASS']
++    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
 +      @home = Gem.default_dir unless 0 == @home.index('/__enclose_io_memfs__')
 +    end
 +    # --------- [Enclose.io Hack end] ---------
@@ -185,7 +185,7 @@ index 618bc793..b2636c90 100644
  
 +    # --------- [Enclose.io Hack start] ---------
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
-+    unless env['ENCLOSE_IO_RUBYC_1ST_PASS']
++    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
 +      @path.keep_if do |x|
 +        0 == x.index('/__enclose_io_memfs__')
 +      end
@@ -211,7 +211,7 @@ index f01a37fd..2276b297 100644
 +"\n     if arg0.kind_of?(Hash) && args[0].kind_of?(String) && '/__enclose_io_memfs__' == args[0][0...21]"
 +"\n       arg0 = arg0.dup"
 +"\n       args[0] = args[0].dup"
-+"\n       arg0['ENCLOSE_IO_USE_ORIGINAL_RUBY'] = '1'"
++"\n       arg0['RUBY_PACKER_USE_ORIGINAL_RUBY'] = '1'"
 +"\n       args[0] = Process.enclose_io_execpath + ' ' + args[0]"
 +"\n     end"
 +"\n     spawn_before_enclose_io(arg0, *args)"
@@ -231,10 +231,10 @@ index f01a37fd..2276b297 100644
 +"\n   end"
 +"\n end"
 +"\n require 'fileutils'"
-+"\n if ENV['ENCLOSE_IO_WORKDIR'] && ENV['ENCLOSE_IO_WORKDIR'].length > 0"
-+"\n   x = File.expand_path(ENV['ENCLOSE_IO_WORKDIR'])"
++"\n if ENV['RUBY_PACKER_WORKDIR'] && ENV['RUBY_PACKER_WORKDIR'].length > 0"
++"\n   x = File.expand_path(ENV['RUBY_PACKER_WORKDIR'])"
 +"\n   FileUtils.mkdir_p(x)"
-+"\n   if ENV['ENCLOSE_IO_RAILS']"
++"\n   if ENV['RUBY_PACKER_RAILS']"
 +"\n     Dir.chdir(x) do"
 +"\n       FileUtils.mkdir_p('config')"
 +"\n       Dir.chdir('config') do"
@@ -248,7 +248,7 @@ index f01a37fd..2276b297 100644
 +"\n   end"
 +"\n   enclose_io_set_mkdir_workdir(x)"
 +"\n end"
-+"\n if ENV['ENCLOSE_IO_RAILS']"
++"\n if ENV['RUBY_PACKER_RAILS']"
 +"\n   Dir.chdir('/__enclose_io_memfs__/local')"
 +"\n end"
 +;
@@ -361,7 +361,7 @@ index 372e0868..b28a56ce 100755
      end
      v = "  CONFIG[\"#{name}\"] #{eq} #{val}\n"
 +
-+    if ENV['ENCLOSE_IO_RUBYC_2ND_PASS']
++    if ENV['RUBY_PACKER_RUBYC_2ND_PASS']
 +      v_head_comp = "  CONFIG[\"prefix\"] #{eq} "
 +      if v_head_comp == v[0...(v_head_comp.length)]
 +        if win32
@@ -442,15 +442,15 @@ index 068784e1..5a8c4947 100644
      *argc = w32_cmdvector(GetCommandLineW(), argv, CP_UTF8, &OnigEncodingUTF_8);
  
 +    // --------- [Enclose.io Hack start] ---------
-+    #ifdef ENCLOSE_IO_ENTRANCE
++    #ifdef RUBY_PACKER_ENTRANCE
 +    new_argc = *argc;
 +    new_argv = *argv;
 +    cp = CP_UTF8;
-+    if (NULL == getenv("ENCLOSE_IO_USE_ORIGINAL_RUBY")) {
++    if (NULL == getenv("RUBY_PACKER_USE_ORIGINAL_RUBY")) {
 +        new_argv = (char **)malloc( (*argc + 1) * sizeof(char *));
 +        assert(new_argv);
 +        new_argv[0] = (*argv)[0];
-+        new_argv[1] = ENCLOSE_IO_ENTRANCE;
++        new_argv[1] = RUBY_PACKER_ENTRANCE;
 +        for (i = 1; i < *argc; ++i) {
 +               new_argv[2 + i - 1] = (*argv)[i];
 +        }

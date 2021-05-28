@@ -2447,8 +2447,8 @@ index 00000000..4d717b18
 + * For full terms see the included LICENSE file
 + */
 +
-+#ifndef ENCLOSE_IO_H_999BC1DA
-+#define ENCLOSE_IO_H_999BC1DA
++#ifndef RUBY_PACKER_H_999BC1DA
++#define RUBY_PACKER_H_999BC1DA
 +
 +#include "enclose_io_prelude.h"
 +#include "enclose_io_common.h"

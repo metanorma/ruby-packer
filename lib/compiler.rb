@@ -362,8 +362,8 @@ class Compiler
       sep = Gem.win_platform? ? ';' : ':'
       if Gem.win_platform?
         unless File.exist?(@ruby_build)
-          @compile_env['ENCLOSE_IO_RUBYC_1ST_PASS'] = '1'
-          @compile_env['ENCLOSE_IO_RUBYC_2ND_PASS'] = nil
+          @compile_env['RUBY_PACKER_RUBYC_1ST_PASS'] = '1'
+          @compile_env['RUBY_PACKER_RUBYC_2ND_PASS'] = nil
           # enclose_io_memfs.o - 1st pass
           @utils.run(@compile_env, "call win32\\configure.bat \
                                   --disable-install-doc \
@@ -421,8 +421,8 @@ class Compiler
         @utils.rm_f('win32/win32.obj')
         @utils.rm_f('include/enclose_io.h')
         @utils.rm_f('enclose_io_memfs.c')
-        @compile_env['ENCLOSE_IO_RUBYC_1ST_PASS'] = nil
-        @compile_env['ENCLOSE_IO_RUBYC_2ND_PASS'] = '1'
+        @compile_env['RUBY_PACKER_RUBYC_1ST_PASS'] = nil
+        @compile_env['RUBY_PACKER_RUBYC_2ND_PASS'] = '1'
         @utils.run(@compile_env, "call win32\\configure.bat \
                                 --prefix=#{@utils.escape @ruby_build} \
                                 --enable-bundled-libyaml \
@@ -439,8 +439,8 @@ class Compiler
         @utils.cp('ruby_static.exe', @options[:output])
       else
         unless File.exist?(@ruby_build)
-          @compile_env['ENCLOSE_IO_RUBYC_1ST_PASS'] = '1'
-          @compile_env['ENCLOSE_IO_RUBYC_2ND_PASS'] = nil
+          @compile_env['RUBY_PACKER_RUBYC_1ST_PASS'] = '1'
+          @compile_env['RUBY_PACKER_RUBYC_2ND_PASS'] = nil
           # enclose_io_memfs.o - 1st pass
           @utils.run(@compile_env, "./configure \
                                   --prefix=#{@utils.escape @ruby_build} \
@@ -468,8 +468,8 @@ class Compiler
         @utils.rm_f('ruby')
         @utils.rm_f('include/enclose_io.h')
         @utils.rm_f('enclose_io_memfs.c')
-        @compile_env['ENCLOSE_IO_RUBYC_1ST_PASS'] = nil
-        @compile_env['ENCLOSE_IO_RUBYC_2ND_PASS'] = '1'
+        @compile_env['RUBY_PACKER_RUBYC_1ST_PASS'] = nil
+        @compile_env['RUBY_PACKER_RUBYC_2ND_PASS'] = '1'
         @utils.run(@compile_env, "./configure \
                                 --prefix=#{@utils.escape @ruby_build} \
                                 --enable-bundled-libyaml \
@@ -512,9 +512,9 @@ class Compiler
       'PATH' => @path_env,
       'GEM_HOME' => nil,
       'GEM_PATH' => nil,
-      'ENCLOSE_IO_USE_ORIGINAL_RUBY' => '1',
-      'ENCLOSE_IO_RUBYC_1ST_PASS' => '1',
-      'ENCLOSE_IO_RUBYC_2ND_PASS' => nil
+      'RUBY_PACKER_USE_ORIGINAL_RUBY' => '1',
+      'RUBY_PACKER_RUBYC_1ST_PASS' => '1',
+      'RUBY_PACKER_RUBYC_2ND_PASS' => nil
     }
   end
 
@@ -696,17 +696,17 @@ class Compiler
       File.open("include/enclose_io.h", "w") do |f|
         # remember to change libsquash's sample/enclose_io.h as well
         # might need to remove some object files at the 2nd pass  
-        f.puts '#ifndef ENCLOSE_IO_H_999BC1DA'
-        f.puts '#define ENCLOSE_IO_H_999BC1DA'
+        f.puts '#ifndef RUBY_PACKER_H_999BC1DA'
+        f.puts '#define RUBY_PACKER_H_999BC1DA'
         f.puts ''
         f.puts '#include "enclose_io_prelude.h"'
         f.puts '#include "enclose_io_common.h"'
         f.puts '#include "enclose_io_win32.h"'
         f.puts '#include "enclose_io_unix.h"'
         f.puts ''
-        f.puts "#define ENCLOSE_IO_ENV_BUNDLE_GEMFILE #{@env_bundle_gemfile.inspect}" if @env_bundle_gemfile
-        f.puts "#define ENCLOSE_IO_ENTRANCE #{@memfs_entrance.inspect}" if @entrance
-        f.puts "#define ENCLOSE_IO_RAILS 1" if @enclose_io_rails
+        f.puts "#define RUBY_PACKER_ENV_BUNDLE_GEMFILE #{@env_bundle_gemfile.inspect}" if @env_bundle_gemfile
+        f.puts "#define RUBY_PACKER_ENTRANCE #{@memfs_entrance.inspect}" if @entrance
+        f.puts "#define RUBY_PACKER_RAILS 1" if @enclose_io_rails
         f.puts '#endif'
         f.puts ''
       end
@@ -740,12 +740,12 @@ class Compiler
     if Gem.win_platform?
       @compile_env = {
         'CI' => 'true',
-        'ENCLOSE_IO_USE_ORIGINAL_RUBY' => '1'
+        'RUBY_PACKER_USE_ORIGINAL_RUBY' => '1'
       }
     else
       @compile_env = {
         'CI' => 'true',
-        'ENCLOSE_IO_USE_ORIGINAL_RUBY' => '1',
+        'RUBY_PACKER_USE_ORIGINAL_RUBY' => '1',
         'CFLAGS' => @cflags,
         'LDFLAGS' => @ldflags
       }
@@ -779,12 +779,12 @@ class Compiler
     if Gem.win_platform?
       @compile_env = {
         'CI' => 'true',
-        'ENCLOSE_IO_USE_ORIGINAL_RUBY' => '1'
+        'RUBY_PACKER_USE_ORIGINAL_RUBY' => '1'
       }
     else
       @compile_env = {
         'CI' => 'true',
-        'ENCLOSE_IO_USE_ORIGINAL_RUBY' => '1',
+        'RUBY_PACKER_USE_ORIGINAL_RUBY' => '1',
         'CFLAGS' => @cflags,
         'LDFLAGS' => @ldflags
       }
