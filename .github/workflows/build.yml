@@ -60,6 +60,15 @@ jobs:
       with:
         repository: metanorma/packed-mn
 
+    - run: |
+        sed -i '13 s/^#//' Gemfile
+        sed -i '16 s/^#//' Gemfile
+        cat Gemfile
+
+    - uses: metanorma/metanorma-build-scripts/gh-rubygems-setup-action@master
+      with:
+        token: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+
     - uses: ruby/setup-ruby@v1
       with:
         bundler: 2.2.3
@@ -148,6 +157,15 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: metanorma/packed-mn
+
+      - run: |
+          sed -i '' '13 s/^#//' Gemfile
+          sed -i '' '16 s/^#//' Gemfile
+          cat Gemfile
+
+      - uses: metanorma/metanorma-build-scripts/gh-rubygems-setup-action@master
+        with:
+          token: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
 
       - uses: ruby/setup-ruby@v1
         with:
