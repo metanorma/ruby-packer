@@ -1,20 +1,20 @@
-From f750fc667a886a7fd193f1d094a3e625de98486d Mon Sep 17 00:00:00 2001
+From 0f4ff7577094e330d06ce74e6128f5d23a361ae6 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:46:16 +0300
-Subject: [PATCH 2/7] enclose io source
+Subject: [PATCH 2/8] enclose io source
 
 ---
  ruby/common.mk                    |    3 +
  ruby/enclose_io_memfs.c           |   55 ++
- ruby/enclose_io_unix.c            | 1045 +++++++++++++++++++++++
+ ruby/enclose_io_unix.c            | 1124 +++++++++++++++++++++++++
  ruby/enclose_io_win32.c           | 1276 +++++++++++++++++++++++++++++
  ruby/include/enclose_io.h         |   17 +
- ruby/include/enclose_io_common.h  |  350 ++++++++
+ ruby/include/enclose_io_common.h  |  352 ++++++++
  ruby/include/enclose_io_prelude.h |   19 +
- ruby/include/enclose_io_unix.h    |   45 +
+ ruby/include/enclose_io_unix.h    |   47 ++
  ruby/include/enclose_io_win32.h   |   72 ++
  ruby/include/enclose_io_winapi.h  |  246 ++++++
- 10 files changed, 3128 insertions(+)
+ 10 files changed, 3211 insertions(+)
  create mode 100644 ruby/enclose_io_memfs.c
  create mode 100644 ruby/enclose_io_unix.c
  create mode 100644 ruby/enclose_io_win32.c
@@ -26,10 +26,10 @@ Subject: [PATCH 2/7] enclose io source
  create mode 100644 ruby/include/enclose_io_winapi.h
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index d1ec8cb8..ff9d1008 100644
+index 2b39acac..51e908fd 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -88,6 +88,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
+@@ -90,6 +90,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
  		squash_table.$(OBJEXT) \
  		squash_traverse.$(OBJEXT) \
  		squash_util.$(OBJEXT) \
@@ -102,10 +102,10 @@ index 00000000..6a650308
 +
 diff --git a/ruby/enclose_io_unix.c b/ruby/enclose_io_unix.c
 new file mode 100644
-index 00000000..073496a7
+index 00000000..ffb7359f
 --- /dev/null
 +++ b/ruby/enclose_io_unix.c
-@@ -0,0 +1,1045 @@
+@@ -0,0 +1,1124 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -457,6 +457,76 @@ index 00000000..073496a7
 +	else {
 +		return opendir(filename);
 +	}
++}
++
++DIR * enclose_io_fdopendir(int fd)
++{
++	sqfs_err error;
++	short found;
++	SQUASH_DIR *dir;
++	int *handle;
++	struct squash_file *file;
++	sqfs *fs;
++
++	if (!SQUASH_VALID_VFD(fd))
++	{
++		return fdopendir(fd);
++	}
++
++	file = squash_global_fdtable.fds[fd];
++
++	dir = calloc(1, sizeof(SQUASH_DIR));
++
++	if (NULL == dir)
++	{
++		errno = ENOMEM;
++		return NULL;
++	}
++
++	fs = file->fs;
++
++	dir->fs = fs;
++	dir->entries = NULL;
++	dir->nr = 0;
++	dir->filename = strdup(file->filename);
++	dir->fd = fd;
++
++	handle = (int *)(squash_global_fdtable.fds[dir->fd]->payload);
++
++	MUTEX_LOCK(&squash_global_mutex);
++	free(handle);
++	squash_global_fdtable.fds[dir->fd]->payload = (void *)dir;
++	MUTEX_UNLOCK(&squash_global_mutex);
++
++	dir->actual_nr = 0;
++	dir->loc = 0;
++	error = sqfs_inode_get(fs, &dir->node, sqfs_inode_root(fs));
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	error = sqfs_lookup_path_inner(fs, &dir->node, dir->filename, &found, 1);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	if (!found)
++	{
++		errno = ENOENT;
++		goto failure;
++	}
++	error = sqfs_dir_open(fs, &dir->node, &dir->dir, 0);
++	if (SQFS_OK != error)
++	{
++		goto failure;
++	}
++	return dir;
++failure:
++	if (!errno) {
++		errno = ENOENT;
++	}
++	free(dir);
++	return NULL;
 +}
 +
 +int enclose_io_closedir(DIR *dirp)
@@ -1020,6 +1090,15 @@ index 00000000..073496a7
 +			return open(pathname, flags, mode);
 +		}
 +	}
++}
++
++int enclose_io_openat(int nargs, int fd, const char *pathname, int flags, ...)
++{
++	if (fd == AT_FDCWD && enclose_io_if(pathname)) {
++		return enclose_io_open(nargs, pathname, flags);
++	}
++
++	return openat(fd, pathname, flags);
 +}
 +
 +int enclose_io_close(int fildes)
@@ -2435,7 +2514,7 @@ index 00000000..f13fa6cb
 +#endif
 diff --git a/ruby/include/enclose_io.h b/ruby/include/enclose_io.h
 new file mode 100644
-index 00000000..4d717b18
+index 00000000..741205de
 --- /dev/null
 +++ b/ruby/include/enclose_io.h
 @@ -0,0 +1,17 @@
@@ -2458,10 +2537,10 @@ index 00000000..4d717b18
 +#endif
 diff --git a/ruby/include/enclose_io_common.h b/ruby/include/enclose_io_common.h
 new file mode 100644
-index 00000000..f79191e8
+index 00000000..695bfcd7
 --- /dev/null
 +++ b/ruby/include/enclose_io_common.h
-@@ -0,0 +1,350 @@
+@@ -0,0 +1,352 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -2611,6 +2690,7 @@ index 00000000..f79191e8
 +int enclose_io_stat(const char *path, struct stat *buf);
 +int enclose_io_fstat(int fildes, struct stat *buf);
 +int enclose_io_open(int nargs, const char *pathname, int flags, ...);
++int enclose_io_openat(int fd, int nargs, const char *pathname, int flags, ...);
 +int enclose_io_close(int fildes);
 +ssize_t enclose_io_read(int fildes, void *buf, size_t nbyte);
 +off_t enclose_io_lseek(int fildes, off_t offset, int whence);
@@ -2794,6 +2874,7 @@ index 00000000..f79191e8
 +int enclose_io_lstat(const char *path, struct stat *buf);
 +ssize_t enclose_io_readlink(const char *path, char *buf, size_t bufsize);
 +DIR * enclose_io_opendir(const char *filename);
++DIR * enclose_io_fdopendir(int fd);
 +int enclose_io_closedir(DIR *dirp);
 +struct SQUASH_DIRENT * enclose_io_readdir(DIR *dirp);
 +long enclose_io_telldir(DIR *dirp);
@@ -2839,10 +2920,10 @@ index 00000000..133d44f1
 +#endif /* end of include guard: ENCLOSE_IO_PRELUDE_H_E46A560C */
 diff --git a/ruby/include/enclose_io_unix.h b/ruby/include/enclose_io_unix.h
 new file mode 100644
-index 00000000..8e0ac20d
+index 00000000..1a916a8f
 --- /dev/null
 +++ b/ruby/include/enclose_io_unix.h
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,47 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -2867,11 +2948,13 @@ index 00000000..8e0ac20d
 +	#define fstat(...)	enclose_io_fstat(__VA_ARGS__)
 +	#define lstat(...)	enclose_io_lstat(__VA_ARGS__)
 +	#define open(...)	enclose_io_open(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
++	#define openat(...)	enclose_io_openat(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
 +	#define close(...)	enclose_io_close(__VA_ARGS__)
 +	#define read(...)	enclose_io_read(__VA_ARGS__)
 +	#define lseek(...)	enclose_io_lseek(__VA_ARGS__)
 +	#define readlink(...)	enclose_io_readlink(__VA_ARGS__)
 +	#define opendir(...)	enclose_io_opendir(__VA_ARGS__)
++	#define fdopendir(...)	enclose_io_fdopendir(__VA_ARGS__)
 +	#define closedir(...)	enclose_io_closedir(__VA_ARGS__)
 +	#define readdir(...)	enclose_io_readdir(__VA_ARGS__)
 +	#define telldir(...)	enclose_io_telldir(__VA_ARGS__)
