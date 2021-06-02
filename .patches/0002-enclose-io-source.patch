@@ -29,7 +29,7 @@ diff --git a/ruby/common.mk b/ruby/common.mk
 index d1ec8cb8..ff9d1008 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -88,6 +88,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
+@@ -90,6 +90,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
  		squash_table.$(OBJEXT) \
  		squash_traverse.$(OBJEXT) \
  		squash_util.$(OBJEXT) \

@@ -1,17 +1,17 @@
-From 57b1514942ef8b63386ad548309504e5fe1ceef4 Mon Sep 17 00:00:00 2001
+From acced6f1bee2682d2ac07b92547c3341de751602 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:59:02 +0300
-Subject: [PATCH 7/7] main function
+Subject: [PATCH 7/8] main function
 
 ---
  ruby/main.c | 89 +++++++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 89 insertions(+)
 
 diff --git a/ruby/main.c b/ruby/main.c
-index 095c19c4..94c69262 100644
+index 4b2675bc..66f5de42 100644
 --- a/ruby/main.c
 +++ b/ruby/main.c
-@@ -19,9 +19,98 @@
+@@ -25,9 +25,98 @@
  #include <stdlib.h>
  #endif
  

@@ -11,15 +11,16 @@ Subject: [PATCH 3/7] makefile
  4 files changed, 48 insertions(+), 11 deletions(-)
 
 diff --git a/ruby/Makefile.in b/ruby/Makefile.in
-index 14413b69..5ce4d784 100644
+index 25075f59..bdaab448 100644
 --- a/ruby/Makefile.in
 +++ b/ruby/Makefile.in
-@@ -218,12 +218,12 @@ all:
+@@ -227,13 +227,13 @@ all:
  miniruby$(EXEEXT):
  		@-if test -f $@; then $(MV) -f $@ $@.old; $(RM) $@.old; fi
  		$(ECHO) linking $@
 -		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(OUTFLAG)$@
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
+ 		$(Q) $(POSTLINK)
  
  $(PROGRAM):
  		@$(RM) $@
@@ -29,17 +30,17 @@ index 14413b69..5ce4d784 100644
  		$(Q) $(POSTLINK)
  
  # We must `rm' the library each time this rule is invoked because "updating" a
-@@ -235,7 +235,7 @@ $(LIBRUBY_A):
- 		$(Q) $(AR) $(ARFLAGS) $@ $(LIBRUBY_A_OBJS) $(INITOBJS)
- 		@-$(RANLIB) $@ 2> /dev/null || true
+@@ -247,7 +247,7 @@ $(LIBRUBY_A):
+ 
+ verify-static-library: $(LIBRUBY_A)
  		$(ECHO) verifying static-library $@
 -		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(OUTFLAG)conftest$(EXEEXT)
 +		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)conftest$(EXEEXT) $(LDFLAGS)
- 		@$(RM) conftest$(EXEEXT) conftest.c
+ 		@$(RMALL) conftest$(EXEEXT) conftest.c conftest.dSYM
  
  $(LIBRUBY_SO):
 diff --git a/ruby/ext/dbm/extconf.rb b/ruby/ext/dbm/extconf.rb
-index 04f751d7..c40fe1cb 100644
+index 514aa3f8..6ae7dfd3 100644
 --- a/ruby/ext/dbm/extconf.rb
 +++ b/ruby/ext/dbm/extconf.rb
 @@ -25,6 +25,9 @@
@@ -53,10 +54,10 @@ index 04f751d7..c40fe1cb 100644
  headers = {
    "libc" => ["ndbm.h"], # 4.3BSD original ndbm, Berkeley DB 1 in 4.4BSD libc.
 diff --git a/ruby/lib/mkmf.rb b/ruby/lib/mkmf.rb
-index 533f3f85..ac94b061 100644
+index 7f53bb4b..432171f0 100644
 --- a/ruby/lib/mkmf.rb
 +++ b/ruby/lib/mkmf.rb
-@@ -2675,17 +2675,17 @@ def MAIN_DOES_NOTHING(*refs)
+@@ -2680,17 +2680,17 @@ def MAIN_DOES_NOTHING(*refs)
  
    TRY_LINK = config_string('TRY_LINK') ||
      "$(CC) #{OUTFLAG}#{CONFTEST}#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
@@ -81,7 +82,7 @@ diff --git a/ruby/win32/Makefile.sub b/ruby/win32/Makefile.sub
 index dc198f63..0c438f2f 100644
 --- a/ruby/win32/Makefile.sub
 +++ b/ruby/win32/Makefile.sub
-@@ -247,7 +247,7 @@ EXTLIBS =
+@@ -250,7 +250,7 @@ EXTLIBS =
  EXTSOLIBS =
  !endif
  !if !defined(LIBS)
@@ -90,7 +91,7 @@ index dc198f63..0c438f2f 100644
  !if $(MSC_VER) >= 1400
  LIBS = $(LIBS) iphlpapi.lib
  !endif
-@@ -977,7 +977,9 @@ miniruby: miniruby$(EXEEXT)
+@@ -981,7 +981,9 @@ miniruby: miniruby$(EXEEXT)
  miniruby$(EXEEXT):
  		@echo $(LIBS)
  		$(ECHO) linking $(@:\=/)
@@ -101,7 +102,7 @@ index dc198f63..0c438f2f 100644
  		@$(RM) miniruby.lib miniruby.exp
  		$(Q) miniruby.exe -v
  		$(Q) $(LDSHARED_1)
-@@ -986,10 +988,42 @@ miniruby$(EXEEXT):
+@@ -990,10 +992,42 @@ miniruby$(EXEEXT):
  miniruby.rc:
  		@exit > $@
  
@@ -145,7 +146,7 @@ index dc198f63..0c438f2f 100644
  			$(OUTFLAG)$@ $(LIBRUBYARG) -link $(LDFLAGS) $(XLDFLAGS)
  		$(Q) $(LDSHARED_0)
  		$(Q) $(LDSHARED_1)
-@@ -999,7 +1033,7 @@ $(PROGRAM):	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
+@@ -1003,7 +1037,7 @@ $(PROGRAM):	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
  !if "$(WPROGRAM)" != ""
  $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
  		$(ECHO) linking $(@:\=/)
@@ -154,7 +155,7 @@ index dc198f63..0c438f2f 100644
  			$(RUBYW_INSTALL_NAME).res $(OUTFLAG)$@ $(LIBRUBYARG) \
  			-link $(LDFLAGS) $(XLDFLAGS) -subsystem:Windows
  		$(Q) $(LDSHARED_0)
-@@ -1010,7 +1044,7 @@ $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
+@@ -1014,7 +1048,7 @@ $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
  !if "$(STUBPROGRAM)" != ""
  $(STUBPROGRAM):	rubystub.$(OBJEXT) $(LIBRUBY) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
  		$(ECHO) linking $(@:\=/)

@@ -86,12 +86,12 @@ Subject: [PATCH 1/7] squashfs source
  create mode 100644 ruby/squash_util.c
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 3f4bcf6c..d1ec8cb8 100644
+index d442710a..a41995f1 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -68,7 +68,27 @@ ENC_MK        = enc.mk
+@@ -70,7 +70,27 @@ ENC_MK        = enc.mk
  MAKE_ENC      = -f $(ENC_MK) V="$(V)" UNICODE_HDR_DIR="$(UNICODE_HDR_DIR)" \
- 		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(MFLAGS)
+ 		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(mflags)
  
 -COMMONOBJS    = array.$(OBJEXT) \
 +COMMONOBJS    = squash_cache.$(OBJEXT) \
