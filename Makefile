@@ -9,7 +9,7 @@ ruby: .build/ruby.tar.gz
 
 .build/ruby.tar.gz:
 	mkdir -p .build
-	curl -L https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.4.tar.gz > .build/ruby.tar.gz
+	curl -L https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.0.tar.gz > .build/ruby.tar.gz
 
 clean: clean-archive clean-source clean-binary
 
