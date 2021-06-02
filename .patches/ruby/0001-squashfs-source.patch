@@ -1,7 +1,7 @@
-From c11050368803c0bfb29efe5d5490e070e116b2d0 Mon Sep 17 00:00:00 2001
+From b583a28eedd9abf2af3ee23ff82896685eb02554 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:44:59 +0300
-Subject: [PATCH 1/7] squashfs source
+Subject: [PATCH 1/8] squashfs source
 
 ---
  ruby/common.mk                    |  22 +-
@@ -11,7 +11,7 @@ Subject: [PATCH 1/7] squashfs source
  ruby/include/squash/decompress.h  |  42 +++
  ruby/include/squash/dir.h         |  94 ++++++
  ruby/include/squash/dirent.h      |  36 +++
- ruby/include/squash/fdtable.h     |  31 ++
+ ruby/include/squash/fdtable.h     |  32 ++
  ruby/include/squash/file.h        |  78 +++++
  ruby/include/squash/fs.h          | 132 ++++++++
  ruby/include/squash/hash.h        |  63 ++++
@@ -26,10 +26,10 @@ Subject: [PATCH 1/7] squashfs source
  ruby/include/squash/windows.h     | 107 +++++++
  ruby/squash_cache.c               |  99 ++++++
  ruby/squash_decompress.c          |  44 +++
- ruby/squash_dir.c                 | 486 ++++++++++++++++++++++++++++++
+ ruby/squash_dir.c                 | 487 ++++++++++++++++++++++++++++++
  ruby/squash_dirent.c              | 215 +++++++++++++
  ruby/squash_extract.c             | 265 ++++++++++++++++
- ruby/squash_fd.c                  | 233 ++++++++++++++
+ ruby/squash_fd.c                  | 241 +++++++++++++++
  ruby/squash_file.c                | 329 ++++++++++++++++++++
  ruby/squash_fs.c                  | 434 ++++++++++++++++++++++++++
  ruby/squash_hash.c                | 131 ++++++++
@@ -44,7 +44,7 @@ Subject: [PATCH 1/7] squashfs source
  ruby/squash_table.c               |  66 ++++
  ruby/squash_traverse.c            | 322 ++++++++++++++++++++
  ruby/squash_util.c                |  84 ++++++
- 40 files changed, 4880 insertions(+), 1 deletion(-)
+ 40 files changed, 4890 insertions(+), 1 deletion(-)
  create mode 100644 ruby/include/squash.h
  create mode 100644 ruby/include/squash/cache.h
  create mode 100644 ruby/include/squash/common.h
@@ -86,12 +86,12 @@ Subject: [PATCH 1/7] squashfs source
  create mode 100644 ruby/squash_util.c
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 3f4bcf6c..d1ec8cb8 100644
+index 2175f67e..2b39acac 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -68,7 +68,27 @@ ENC_MK        = enc.mk
+@@ -70,7 +70,27 @@ ENC_MK        = enc.mk
  MAKE_ENC      = -f $(ENC_MK) V="$(V)" UNICODE_HDR_DIR="$(UNICODE_HDR_DIR)" \
- 		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(MFLAGS)
+ 		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(mflags)
  
 -COMMONOBJS    = array.$(OBJEXT) \
 +COMMONOBJS    = squash_cache.$(OBJEXT) \
@@ -720,10 +720,10 @@ index 00000000..6ec2ac69
 +#endif /* end of include guard: DIRENT_H_245C4278 */
 diff --git a/ruby/include/squash/fdtable.h b/ruby/include/squash/fdtable.h
 new file mode 100644
-index 00000000..65d452f0
+index 00000000..d89c1014
 --- /dev/null
 +++ b/ruby/include/squash/fdtable.h
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,32 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -743,6 +743,7 @@ index 00000000..65d452f0
 +	sqfs_inode node;
 +	struct stat st;
 +	uint64_t pos;
++	char *filename;
 +	void *payload;
 +};
 +
@@ -1988,10 +1989,10 @@ index 00000000..aa85602a
 +}
 diff --git a/ruby/squash_dir.c b/ruby/squash_dir.c
 new file mode 100644
-index 00000000..6c94dcd9
+index 00000000..e9842af8
 --- /dev/null
 +++ b/ruby/squash_dir.c
-@@ -0,0 +1,486 @@
+@@ -0,0 +1,487 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
 + * All rights reserved.
@@ -2023,6 +2024,7 @@ index 00000000..6c94dcd9
 +#include "squash/fs.h"
 +
 +#include <string.h>
++#include <stdlib.h>
 +
 +/* Read some directory metadata, updating the dir structure as necessary */
 +static sqfs_err sqfs_dir_md_read(sqfs *fs, sqfs_dir *dir, void *buf,
@@ -2972,10 +2974,10 @@ index 00000000..acd8ce6c
 +}
 diff --git a/ruby/squash_fd.c b/ruby/squash_fd.c
 new file mode 100644
-index 00000000..44139e70
+index 00000000..c692e532
 --- /dev/null
 +++ b/ruby/squash_fd.c
-@@ -0,0 +1,233 @@
+@@ -0,0 +1,241 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -3015,6 +3017,8 @@ index 00000000..44139e70
 +	{
 +		goto failure;
 +	}
++	file->filename = strdup(path);
++
 +	if (!found)
 +	{
 +		errno = ENOENT;
@@ -3091,6 +3095,8 @@ index 00000000..44139e70
 +int squash_close(int vfd)
 +{
 +	int ret;
++	struct squash_file *file;
++
 +        if (!SQUASH_VALID_VFD(vfd)) {
 +                errno = EBADF;
 +                return -1;
@@ -3107,7 +3113,11 @@ index 00000000..44139e70
 +                int *handle = (int *) (squash_global_fdtable.fds[vfd]->payload);
 +                free(handle);
 +        }
-+        free(squash_global_fdtable.fds[vfd]);
++
++        file = squash_global_fdtable.fds[vfd];
++        free(file->filename);
++        free(file);
++
 +        squash_global_fdtable.fds[vfd] = NULL;
 +        if (vfd + 1 == squash_global_fdtable.end) {
 +                while (vfd >= 0 && NULL == squash_global_fdtable.fds[vfd]) {

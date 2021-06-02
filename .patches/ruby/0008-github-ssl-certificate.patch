@@ -1,4 +1,4 @@
-From 3bd76b5427f0ed30e3c10ec4d5dbc1d702b324c5 Mon Sep 17 00:00:00 2001
+From c3f8155d88ce8d04288020848535f16bcc940c29 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 2 Jun 2021 21:32:39 +0300
 Subject: [PATCH 8/8] github ssl certificate
