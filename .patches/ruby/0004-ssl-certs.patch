@@ -1,7 +1,7 @@
-From 30801844cb8ed0aed10e766765ef9372ddf29560 Mon Sep 17 00:00:00 2001
+From 3fe8d065ec161676d0f942b310063bc5ab05062c Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:50:34 +0300
-Subject: [PATCH 4/7] ssl certs
+Subject: [PATCH 4/8] ssl certs
 
 ---
  .../index.rubygems.org/GlobalSignRootCA.pem   | 21 ----------------
