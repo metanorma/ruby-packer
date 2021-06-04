@@ -1,23 +1,93 @@
+RUBY_VERSION = 2.4.4
+GDBM_VERSION = 1.13
+LIBFFI_VERSION = 3.2.1
+NCURSES_VERSION = 6.2
+OPENSSL_VERSION = 1.1.0f
+READLINE_VERSION = 7.0
+YAML_VERSION = 0.1.7
+ZLIB_VERSION = 1.2.11
+
+RUBY_URL = https://cache.ruby-lang.org/pub/ruby/$(basename $(RUBY_VERSION))/ruby-$(RUBY_VERSION).tar.gz
+GDBM_URL = https://ftp.gnu.org/pub/gnu/gdbm/gdbm-$(GDBM_VERSION).tar.gz
+LIBFFI_URL = https://gcc.gnu.org/pub/libffi/libffi-$(LIBFFI_VERSION).tar.gz
+NCURSES_URL = https://ftp.gnu.org/pub/gnu/ncurses/ncurses-$(NCURSES_VERSION).tar.gz
+OPENSSL_URL = https://www.openssl.org/source/old/1.1.0/openssl-$(OPENSSL_VERSION).tar.gz
+READLINE_URL = https://ftp.gnu.org/gnu/readline/readline-$(READLINE_VERSION).tar.gz
+YAML_URL = https://pyyaml.org/download/libyaml/yaml-$(YAML_VERSION).tar.gz
+ZLIB_URL = https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz
+
+# To avoid removal of intermediate files
+.SECONDARY:
+
 .PHONY: all clean
 
-all: clean-binary ruby
+all: clean-binary ruby vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
+     vendor/readline vendor/yaml vendor/zlib
 
-ruby: .build/ruby.tar.gz
-	tar xzf .build/ruby.tar.gz
-	mv ruby-* ruby
-	git apply --verbose .patches/*.patch
+ruby: .archives/ruby-$(RUBY_VERSION).tar.gz
+	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
+	mv ruby-$(RUBY_VERSION) ruby
+	git apply --verbose .patches/ruby/*.patch
 
-.build/ruby.tar.gz:
-	mkdir -p .build
-	curl -L https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.4.tar.gz > .build/ruby.tar.gz
+ruby-orig: .archives/ruby-$(RUBY_VERSION).tar.gz
+	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
+	mv ruby-$(RUBY_VERSION) ruby
 
-clean: clean-archive clean-source clean-binary
+.archives/ruby-$(RUBY_VERSION).tar.gz:
+	mkdir -p .archives
+	cd .archives && \
+	curl -O $(RUBY_URL)
 
-clean-archive:
-	rm -rvf .build
+vendor/gdbm: .archives/gdbm-$(GDBM_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/gdbm-$(GDBM_VERSION).tar.gz && mv gdbm-$(GDBM_VERSION) gdbm
+	git apply --verbose .patches/gdbm/*.patch
+.archives/gdbm-$(GDBM_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(GDBM_URL)
 
-clean-source:
+vendor/libffi: .archives/libffi-$(LIBFFI_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/libffi-$(LIBFFI_VERSION).tar.gz && mv libffi-$(LIBFFI_VERSION) libffi
+.archives/libffi-$(LIBFFI_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(LIBFFI_URL)
+
+vendor/ncurses: .archives/ncurses-$(NCURSES_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/ncurses-$(NCURSES_VERSION).tar.gz && mv ncurses-$(NCURSES_VERSION) ncurses
+.archives/ncurses-$(NCURSES_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(NCURSES_URL)
+
+vendor/openssl: .archives/openssl-$(OPENSSL_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/openssl-$(OPENSSL_VERSION).tar.gz && mv openssl-$(OPENSSL_VERSION) openssl
+.archives/openssl-$(OPENSSL_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(OPENSSL_URL)
+
+vendor/readline: .archives/readline-$(READLINE_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/readline-$(READLINE_VERSION).tar.gz && mv readline-$(READLINE_VERSION) readline
+.archives/readline-$(READLINE_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(READLINE_URL)
+
+vendor/yaml: .archives/yaml-$(YAML_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/yaml-$(YAML_VERSION).tar.gz && mv yaml-$(YAML_VERSION) yaml
+.archives/yaml-$(YAML_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(YAML_URL)
+
+vendor/zlib: .archives/zlib-$(ZLIB_VERSION).tar.gz
+	cd vendor && tar xzf ../.archives/zlib-$(ZLIB_VERSION).tar.gz && mv zlib-$(ZLIB_VERSION) zlib
+.archives/zlib-$(ZLIB_VERSION).tar.gz:
+	mkdir -p .archives && cd .archives && curl -O $(ZLIB_URL)
+
+clean-all: clean clean-archives
+clean: clean-ruby clean-vendor clean-binary
+
+clean-archives:
+	rm -rvf .archives
+
+clean-ruby:
 	rm -rvf ruby
+
+clean-vendor: clean-vendor-gdbm clean-vendor-libffi clean-vendor-ncurses \
+              clean-vendor-openssl clean-vendor-readline clean-vendor-yaml clean-vendor-zlib
+
+clean-vendor-%:
+	rm -rvf vendor/$(*)
 
 clean-binary:
 	rm -vf rubyc-linux-x64

@@ -8,7 +8,10 @@
 /a.exe
 /a.out
 
-/.build/
+/.archives/
 /ruby/
 /rubyc-linux-x64
 /rubyc-darwin-x64
+
+/vendor/
+!/vendor/.keep
