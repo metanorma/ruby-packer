@@ -1,4 +1,4 @@
-RUBY_VERSION = 2.5.1
+RUBY_VERSION = 2.6.3
 BUNDLER_VERSION = 2.2.3
 GDBM_VERSION = 1.13
 LIBFFI_VERSION = 3.2.1
@@ -21,10 +21,12 @@ ZLIB_URL = https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 # To avoid removal of intermediate files
 .SECONDARY:
 
-.PHONY: all clean
+.PHONY: all make-vendor clean
 
-all: clean-binary ruby vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
-     vendor/readline vendor/yaml vendor/zlib
+all: clean-binary ruby make-vendor
+
+make-vendor: vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
+             vendor/readline vendor/yaml vendor/zlib
 
 ruby: .archives/ruby-$(RUBY_VERSION).tar.gz
 	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
@@ -84,16 +86,16 @@ clean-all: clean clean-archives
 clean: clean-ruby clean-vendor clean-binary
 
 clean-archives:
-	rm -rvf .archives
+	rm -rf .archives
 
 clean-ruby:
-	rm -rvf ruby
+	rm -rf ruby
 
 clean-vendor: clean-vendor-gdbm clean-vendor-libffi clean-vendor-ncurses \
               clean-vendor-openssl clean-vendor-readline clean-vendor-yaml clean-vendor-zlib
 
 clean-vendor-%:
-	rm -rvf vendor/$(*)
+	rm -rf vendor/$(*)
 
 clean-binary:
-	rm -vf rubyc-linux-x64
+	rm -f rubyc-linux-x64

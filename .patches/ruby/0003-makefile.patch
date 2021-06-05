@@ -1,4 +1,4 @@
-From 376ffd3dcda51fb208497e6e8b3396c05dc49f01 Mon Sep 17 00:00:00 2001
+From 52c7e41502543ecb4f1e60d3c2c3bb4a8f54b680 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:34:49 +0300
 Subject: [PATCH 3/7] makefile
@@ -11,10 +11,10 @@ Subject: [PATCH 3/7] makefile
  4 files changed, 48 insertions(+), 11 deletions(-)
 
 diff --git a/ruby/Makefile.in b/ruby/Makefile.in
-index 25075f59..bdaab448 100644
+index fa1e19ef..5cba915a 100644
 --- a/ruby/Makefile.in
 +++ b/ruby/Makefile.in
-@@ -227,13 +227,13 @@ all:
+@@ -262,13 +262,13 @@ all:
  miniruby$(EXEEXT):
  		@-if test -f $@; then $(MV) -f $@ $@.old; $(RM) $@.old; fi
  		$(ECHO) linking $@
@@ -29,8 +29,8 @@ index 25075f59..bdaab448 100644
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(EXTOBJS) $(LIBRUBYARG) $(MAINLIBS) $(LIBS) $(EXTLIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
  		$(Q) $(POSTLINK)
 
- # We must `rm' the library each time this rule is invoked because "updating" a
-@@ -247,7 +247,7 @@ $(LIBRUBY_A):
+ PRE_LIBRUBY_UPDATE = [ -n "$(LIBRUBY_SO_UPDATE)" ] || $(exec) $(RM) $(LIBRUBY_EXTS)
+@@ -285,7 +285,7 @@ $(LIBRUBY_A):
 
  verify-static-library: $(LIBRUBY_A)
  		$(ECHO) verifying static-library $@
@@ -40,12 +40,12 @@ index 25075f59..bdaab448 100644
 
  $(LIBRUBY_SO):
 diff --git a/ruby/ext/dbm/extconf.rb b/ruby/ext/dbm/extconf.rb
-index 514aa3f8..6ae7dfd3 100644
+index c9a5518b..e85376fb 100644
 --- a/ruby/ext/dbm/extconf.rb
 +++ b/ruby/ext/dbm/extconf.rb
-@@ -25,6 +25,9 @@
+@@ -26,6 +26,9 @@
  else
-   dblib = %w(libc db db2 db1 db5 db4 db3 gdbm_compat gdbm qdbm)
+   dblib = %w(libc db db2 db1 db6 db5 db4 db3 gdbm_compat gdbm qdbm)
  end
 +# --------- [Enclose.io Hack start] ---------
 +dblib = %w(gdbm_compat)
@@ -54,15 +54,15 @@ index 514aa3f8..6ae7dfd3 100644
  headers = {
    "libc" => ["ndbm.h"], # 4.3BSD original ndbm, Berkeley DB 1 in 4.4BSD libc.
 diff --git a/ruby/lib/mkmf.rb b/ruby/lib/mkmf.rb
-index 7f53bb4b..432171f0 100644
+index 0d9d3d9f..4257952e 100644
 --- a/ruby/lib/mkmf.rb
 +++ b/ruby/lib/mkmf.rb
-@@ -2680,17 +2680,17 @@ def MAIN_DOES_NOTHING(*refs)
+@@ -2698,17 +2698,17 @@ def MAIN_DOES_NOTHING(*refs)
 
    TRY_LINK = config_string('TRY_LINK') ||
      "$(CC) #{OUTFLAG}#{CONFTEST}#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
 -    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS)"
-+    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS) $(LDFLAGS)"
++    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS) $(MAINLIBS) $(LDFLAGS)"
 
    ##
    # Command which will link a shared library
@@ -79,10 +79,10 @@ index 7f53bb4b..432171f0 100644
    end
 
 diff --git a/ruby/win32/Makefile.sub b/ruby/win32/Makefile.sub
-index 70440e1c..2067130c 100644
+index 9ee5ddd5..0bb42f2b 100644
 --- a/ruby/win32/Makefile.sub
 +++ b/ruby/win32/Makefile.sub
-@@ -250,7 +250,7 @@ EXTLIBS =
+@@ -275,7 +275,7 @@ EXTLIBS =
  EXTSOLIBS =
  !endif
  !if !defined(LIBS)
@@ -91,7 +91,7 @@ index 70440e1c..2067130c 100644
  !if $(MSC_VER) >= 1400
  LIBS = $(LIBS) iphlpapi.lib
  !endif
-@@ -981,7 +981,9 @@ miniruby: miniruby$(EXEEXT)
+@@ -1087,7 +1087,9 @@ miniruby: miniruby$(EXEEXT)
  miniruby$(EXEEXT):
  		@echo $(LIBS)
  		$(ECHO) linking $(@:\=/)
@@ -102,7 +102,7 @@ index 70440e1c..2067130c 100644
  		@$(RM) miniruby.lib miniruby.exp
  		$(Q) miniruby.exe -v
  		$(Q) $(LDSHARED_1)
-@@ -990,10 +992,42 @@ miniruby$(EXEEXT):
+@@ -1096,10 +1098,42 @@ miniruby$(EXEEXT):
  miniruby.rc:
  		@exit > $@
 
@@ -141,12 +141,12 @@ index 70440e1c..2067130c 100644
  !if "$(PROGRAM)" != ""
  $(PROGRAM):	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
  		$(ECHO) linking $(@:\=/)
--		$(Q) $(PURIFY) $(CC) $(MAINOBJ) $(RUBY_INSTALL_NAME).res \
-+		$(Q) $(PURIFY) $(CC) $(CFLAGS) $(MAINOBJ) enclose_io_unix.obj enclose_io_memfs.obj squash_fd.obj Shell32.lib $(RUBY_INSTALL_NAME).res \
+-		$(Q) $(PURIFY) $(CC) $(MAINOBJ) $(EXTOBJS) $(RUBY_INSTALL_NAME).res \
++		$(Q) $(PURIFY) $(CC) $(CFLAGS) $(MAINOBJ) $(EXTOBJS) enclose_io_unix.obj enclose_io_memfs.obj squash_fd.obj Shell32.lib $(RUBY_INSTALL_NAME).res \
  			$(OUTFLAG)$@ $(LIBRUBYARG) -link $(LDFLAGS) $(XLDFLAGS)
  		$(Q) $(LDSHARED_0)
  		$(Q) $(LDSHARED_1)
-@@ -1003,7 +1037,7 @@ $(PROGRAM):	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
+@@ -1109,7 +1143,7 @@ $(PROGRAM):	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
  !if "$(WPROGRAM)" != ""
  $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
  		$(ECHO) linking $(@:\=/)
@@ -155,7 +155,7 @@ index 70440e1c..2067130c 100644
  			$(RUBYW_INSTALL_NAME).res $(OUTFLAG)$@ $(LIBRUBYARG) \
  			-link $(LDFLAGS) $(XLDFLAGS) -subsystem:Windows
  		$(Q) $(LDSHARED_0)
-@@ -1014,7 +1048,7 @@ $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
+@@ -1120,7 +1154,7 @@ $(WPROGRAM):	$(MAINOBJ) $(WINMAINOBJ) $(LIBRUBY_SO) $(RUBYW_INSTALL_NAME).res
  !if "$(STUBPROGRAM)" != ""
  $(STUBPROGRAM):	rubystub.$(OBJEXT) $(LIBRUBY) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
  		$(ECHO) linking $(@:\=/)
