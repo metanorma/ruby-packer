@@ -1,4 +1,4 @@
-From b583a28eedd9abf2af3ee23ff82896685eb02554 Mon Sep 17 00:00:00 2001
+From 557c3e95a705dcc573becf4fb76dbc6e2cb47dac Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:44:59 +0300
 Subject: [PATCH 1/7] squashfs source
@@ -86,10 +86,10 @@ Subject: [PATCH 1/7] squashfs source
  create mode 100644 ruby/squash_util.c
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 2175f67e..2b39acac 100644
+index 4bcd0037..0608fa72 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -70,7 +70,27 @@ ENC_MK        = enc.mk
+@@ -74,7 +74,27 @@ ENC_MK        = enc.mk
  MAKE_ENC      = -f $(ENC_MK) V="$(V)" UNICODE_HDR_DIR="$(UNICODE_HDR_DIR)" \
  		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(mflags)
 
@@ -115,12 +115,12 @@ index 2175f67e..2b39acac 100644
 +		squash_traverse.$(OBJEXT) \
 +		squash_util.$(OBJEXT) \
 +		array.$(OBJEXT) \
+ 		ast.$(OBJEXT) \
  		bignum.$(OBJEXT) \
  		class.$(OBJEXT) \
- 		compar.$(OBJEXT) \
 diff --git a/ruby/include/squash.h b/ruby/include/squash.h
 new file mode 100644
-index 00000000..fceea2e0
+index 00000000..db09313b
 --- /dev/null
 +++ b/ruby/include/squash.h
 @@ -0,0 +1,244 @@
@@ -370,7 +370,7 @@ index 00000000..fceea2e0
 +#endif
 diff --git a/ruby/include/squash/cache.h b/ruby/include/squash/cache.h
 new file mode 100644
-index 00000000..e60a5924
+index 00000000..c5081ad0
 --- /dev/null
 +++ b/ruby/include/squash/cache.h
 @@ -0,0 +1,68 @@
@@ -758,7 +758,7 @@ index 00000000..d89c1014
 +#endif /* end of include guard: FDTABLE_H_60F13289 */
 diff --git a/ruby/include/squash/file.h b/ruby/include/squash/file.h
 new file mode 100644
-index 00000000..eafd8ed4
+index 00000000..6076c4ae
 --- /dev/null
 +++ b/ruby/include/squash/file.h
 @@ -0,0 +1,78 @@
@@ -842,7 +842,7 @@ index 00000000..eafd8ed4
 +#endif
 diff --git a/ruby/include/squash/fs.h b/ruby/include/squash/fs.h
 new file mode 100644
-index 00000000..9c3c6998
+index 00000000..c16f004e
 --- /dev/null
 +++ b/ruby/include/squash/fs.h
 @@ -0,0 +1,132 @@
@@ -1599,7 +1599,7 @@ index 00000000..7dea081f
 +#endif
 diff --git a/ruby/include/squash/traverse.h b/ruby/include/squash/traverse.h
 new file mode 100644
-index 00000000..23a9c84f
+index 00000000..b0314f42
 --- /dev/null
 +++ b/ruby/include/squash/traverse.h
 @@ -0,0 +1,69 @@
@@ -1834,7 +1834,7 @@ index 00000000..e336a359
 +#endif /* end of include guard: WINDOWS_H_A80B5674 */
 diff --git a/ruby/squash_cache.c b/ruby/squash_cache.c
 new file mode 100644
-index 00000000..5a999cc8
+index 00000000..5e9a053d
 --- /dev/null
 +++ b/ruby/squash_cache.c
 @@ -0,0 +1,99 @@
@@ -1989,7 +1989,7 @@ index 00000000..aa85602a
 +}
 diff --git a/ruby/squash_dir.c b/ruby/squash_dir.c
 new file mode 100644
-index 00000000..e9842af8
+index 00000000..6f29d38e
 --- /dev/null
 +++ b/ruby/squash_dir.c
 @@ -0,0 +1,487 @@
@@ -2482,7 +2482,7 @@ index 00000000..e9842af8
 +}
 diff --git a/ruby/squash_dirent.c b/ruby/squash_dirent.c
 new file mode 100644
-index 00000000..2a9d9fd1
+index 00000000..bd3055ac
 --- /dev/null
 +++ b/ruby/squash_dirent.c
 @@ -0,0 +1,215 @@
@@ -3221,7 +3221,7 @@ index 00000000..c692e532
 +}
 diff --git a/ruby/squash_file.c b/ruby/squash_file.c
 new file mode 100644
-index 00000000..d680b5fc
+index 00000000..c2a35c7a
 --- /dev/null
 +++ b/ruby/squash_file.c
 @@ -0,0 +1,329 @@
@@ -3556,7 +3556,7 @@ index 00000000..d680b5fc
 +
 diff --git a/ruby/squash_fs.c b/ruby/squash_fs.c
 new file mode 100644
-index 00000000..d51ea265
+index 00000000..7a0b881c
 --- /dev/null
 +++ b/ruby/squash_fs.c
 @@ -0,0 +1,434 @@
@@ -3996,7 +3996,7 @@ index 00000000..d51ea265
 +#undef INODE_TYPE
 diff --git a/ruby/squash_hash.c b/ruby/squash_hash.c
 new file mode 100644
-index 00000000..2996a24d
+index 00000000..ece84d55
 --- /dev/null
 +++ b/ruby/squash_hash.c
 @@ -0,0 +1,131 @@
@@ -4293,7 +4293,7 @@ index 00000000..31552971
 +
 diff --git a/ruby/squash_private.c b/ruby/squash_private.c
 new file mode 100644
-index 00000000..c87bea1d
+index 00000000..4ac275a9
 --- /dev/null
 +++ b/ruby/squash_private.c
 @@ -0,0 +1,47 @@
@@ -4510,7 +4510,7 @@ index 00000000..bb0e0286
 \ No newline at end of file
 diff --git a/ruby/squash_stack.c b/ruby/squash_stack.c
 new file mode 100644
-index 00000000..fe748c39
+index 00000000..c2996b4d
 --- /dev/null
 +++ b/ruby/squash_stack.c
 @@ -0,0 +1,130 @@
@@ -4646,7 +4646,7 @@ index 00000000..fe748c39
 +}
 diff --git a/ruby/squash_stat.c b/ruby/squash_stat.c
 new file mode 100644
-index 00000000..ccab07d2
+index 00000000..8f8c5104
 --- /dev/null
 +++ b/ruby/squash_stat.c
 @@ -0,0 +1,82 @@
@@ -4734,7 +4734,7 @@ index 00000000..ccab07d2
 +}
 diff --git a/ruby/squash_table.c b/ruby/squash_table.c
 new file mode 100644
-index 00000000..e4fbd5cd
+index 00000000..9667a3dc
 --- /dev/null
 +++ b/ruby/squash_table.c
 @@ -0,0 +1,66 @@
@@ -4806,7 +4806,7 @@ index 00000000..e4fbd5cd
 +}
 diff --git a/ruby/squash_traverse.c b/ruby/squash_traverse.c
 new file mode 100644
-index 00000000..012d98b9
+index 00000000..cb112e29
 --- /dev/null
 +++ b/ruby/squash_traverse.c
 @@ -0,0 +1,322 @@

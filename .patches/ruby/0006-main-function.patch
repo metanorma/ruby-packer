@@ -1,7 +1,7 @@
-From a4c880f66a9959ad35c0cce2436803d96c303db9 Mon Sep 17 00:00:00 2001
+From 64a842d785eb6e3cf002db48b59b9a6c5605c44f Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:59:02 +0300
-Subject: [PATCH 7/7] main function
+Subject: [PATCH 6/7] main function
 
 ---
  ruby/main.c | 89 +++++++++++++++++++++++++++++++++++++++++++++++++++++
