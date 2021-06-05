@@ -1,4 +1,4 @@
-From 73bae71d86a15f34ba6aab04fa8de05933e4e495 Mon Sep 17 00:00:00 2001
+From 130e17e6aa52b7a537ddfa7c81a6b2944c23e986 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 20:05:44 +0300
 Subject: [PATCH 6/8] enclose io usage
@@ -19,10 +19,10 @@ Subject: [PATCH 6/8] enclose io usage
  12 files changed, 244 insertions(+), 4 deletions(-)
 
 diff --git a/ruby/dir.c b/ruby/dir.c
-index 6614ef2f..ce435e02 100644
+index 29c3e5af..4dac3a75 100644
 --- a/ruby/dir.c
 +++ b/ruby/dir.c
-@@ -121,6 +121,10 @@ char *strchr(char*,char);
+@@ -127,6 +127,10 @@ char *strchr(char*,char);
  # define NORMALIZE_UTF8PATH 0
  #endif
  
@@ -33,7 +33,7 @@ index 6614ef2f..ce435e02 100644
  #if NORMALIZE_UTF8PATH
  #include <sys/param.h>
  #include <sys/mount.h>
-@@ -138,8 +142,10 @@ need_normalization(DIR *dirp, const char *path)
+@@ -144,8 +148,10 @@ need_normalization(DIR *dirp, const char *path)
      u_int32_t attrbuf[SIZEUP32(fsobj_tag_t)];
      struct attrlist al = {ATTR_BIT_MAP_COUNT, 0, ATTR_CMN_OBJTAG,};
  #   if defined HAVE_FGETATTRLIST
@@ -44,7 +44,7 @@ index 6614ef2f..ce435e02 100644
      int ret = getattrlist(path, &al, attrbuf, sizeof(attrbuf), 0);
  #   endif
      if (!ret) {
-@@ -561,8 +567,13 @@ dir_initialize(int argc, VALUE *argv, VALUE dir)
+@@ -567,8 +573,13 @@ dir_initialize(int argc, VALUE *argv, VALUE dir)
  	else if (e == EIO) {
  	    u_int32_t attrbuf[1];
  	    struct attrlist al = {ATTR_BIT_MAP_COUNT, 0};
@@ -60,7 +60,7 @@ index 6614ef2f..ce435e02 100644
  	    }
  	}
  #endif
-@@ -1741,9 +1752,13 @@ is_case_sensitive(DIR *dirp, const char *path)
+@@ -1772,9 +1783,13 @@ is_case_sensitive(DIR *dirp, const char *path)
      const uint32_t mask = VOL_CAP_FMT_CASE_SENSITIVE;
  
  #   if defined HAVE_FGETATTRLIST
@@ -74,7 +74,7 @@ index 6614ef2f..ce435e02 100644
      if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), FSOPT_NOFOLLOW))
  	return -1;
  #   endif
-@@ -2256,7 +2271,7 @@ glob_helper(
+@@ -2387,7 +2402,7 @@ glob_helper(
  		    break;
  		}
  #if USE_NAME_ON_FS == USE_NAME_ON_FS_REAL_BASENAME
@@ -83,7 +83,7 @@ index 6614ef2f..ce435e02 100644
  		    buf = replace_real_basename(buf, pathlen + (dirsep != 0), enc,
  						IF_NORMALIZE_UTF8PATH(1)+0,
  						flags, &new_pathtype);
-@@ -3148,7 +3163,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
+@@ -3329,7 +3344,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
      path = RSTRING_PTR(dirname);
  
  #if defined HAVE_GETATTRLIST && defined ATTR_DIR_ENTRYCOUNT
@@ -93,10 +93,10 @@ index 6614ef2f..ce435e02 100644
  	struct attrlist al = {ATTR_BIT_MAP_COUNT, 0, ATTR_CMN_OBJTAG,};
  	if (getattrlist(path, &al, attrbuf, sizeof(attrbuf), 0) != 0)
 diff --git a/ruby/dln.c b/ruby/dln.c
-index f8fb34ca..793485fa 100644
+index f0a7e778..d536d008 100644
 --- a/ruby/dln.c
 +++ b/ruby/dln.c
-@@ -115,6 +115,10 @@ dln_loaderror(const char *format, ...)
+@@ -116,6 +116,10 @@ dln_loaderror(const char *format, ...)
  #define isdirsep(x) ((x) == '/')
  #endif
  
@@ -108,7 +108,7 @@ index f8fb34ca..793485fa 100644
  init_funcname_len(const char **file)
  {
 diff --git a/ruby/ext/openssl/ossl_x509store.c b/ruby/ext/openssl/ossl_x509store.c
-index c6cf67ad..0321fe92 100644
+index 2909eeda..4c932950 100644
 --- a/ruby/ext/openssl/ossl_x509store.c
 +++ b/ruby/ext/openssl/ossl_x509store.c
 @@ -332,6 +332,10 @@ ossl_x509store_add_file(VALUE self, VALUE file)
@@ -135,10 +135,10 @@ index c6cf67ad..0321fe92 100644
          ossl_raise(eX509StoreError, NULL);
      }
 diff --git a/ruby/file.c b/ruby/file.c
-index 0a810af4..d2c0e2de 100644
+index 3413967f..e7ff07ae 100644
 --- a/ruby/file.c
 +++ b/ruby/file.c
-@@ -88,6 +88,10 @@ int flock(int, int);
+@@ -89,6 +89,10 @@ int flock(int, int);
  #define lstat stat
  #endif
  
@@ -150,11 +150,11 @@ index 0a810af4..d2c0e2de 100644
  #ifdef _WIN32
  #include "win32/file.h"
 diff --git a/ruby/io.c b/ruby/io.c
-index 2157a94a..9bf01992 100644
+index 3858d563..2573b2dd 100644
 --- a/ruby/io.c
 +++ b/ruby/io.c
-@@ -133,6 +133,10 @@ off_t __syscall(quad_t number, ...);
- #define rename(f, t)	rb_w32_urename((f), (t))
+@@ -144,6 +144,10 @@ off_t __syscall(quad_t number, ...);
+ #  define RUBY_PIPE_NONBLOCK_DEFAULT    (0)
  #endif
  
 +// --------- [Enclose.io Hack start] ---------
@@ -165,12 +165,12 @@ index 2157a94a..9bf01992 100644
  VALUE rb_eEOFError;
  VALUE rb_eIOError;
 diff --git a/ruby/lib/rubygems/path_support.rb b/ruby/lib/rubygems/path_support.rb
-index 618bc793..d2a17847 100644
+index ed680d65..108b6422 100644
 --- a/ruby/lib/rubygems/path_support.rb
 +++ b/ruby/lib/rubygems/path_support.rb
-@@ -25,12 +25,28 @@ class Gem::PathSupport
+@@ -25,6 +25,13 @@ class Gem::PathSupport
    def initialize(env)
-     @home     = env["GEM_HOME"] || Gem.default_dir
+     @home = env["GEM_HOME"] || Gem.default_dir
  
 +    # --------- [Enclose.io Hack start] ---------
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
@@ -179,9 +179,10 @@ index 618bc793..d2a17847 100644
 +    end
 +    # --------- [Enclose.io Hack end] ---------
 +
-     if File::ALT_SEPARATOR then
-       @home   = @home.gsub(File::ALT_SEPARATOR, File::SEPARATOR)
+     if File::ALT_SEPARATOR
+       @home = @home.gsub(File::ALT_SEPARATOR, File::SEPARATOR)
      end
+@@ -33,6 +40,15 @@ def initialize(env)
  
      @path = split_gem_path env["GEM_PATH"], @home
  
@@ -198,11 +199,11 @@ index 618bc793..d2a17847 100644
  
      @spec_cache_dir = @spec_cache_dir.dup.untaint
 diff --git a/ruby/prelude.c b/ruby/prelude.c
-index 2a572c2b..2a64a0c3 100644
+index 2a426e3b..599555a4 100644
 --- a/ruby/prelude.c
 +++ b/ruby/prelude.c
-@@ -195,6 +195,55 @@ static const struct {
- #line 196 "prelude.c"
+@@ -198,6 +198,55 @@ static const struct {
+ #line 199 "prelude.c"
  };
  
 +static const char prelude_name_enclose_io[] = "<internal:enclose_io_prelude>";
@@ -255,11 +256,11 @@ index 2a572c2b..2a64a0c3 100644
 +"\n end"
 +;
  
- #define PRELUDE_STR(n) rb_usascii_str_new_static(prelude_##n.L0, sizeof(prelude_##n))
- #ifdef __GNUC__
-@@ -237,6 +286,13 @@ Init_prelude(void)
-     prelude_eval(PRELUDE_STR(code0), PRELUDE_STR(name0), 1);
-     prelude_eval(PRELUDE_STR(code1), PRELUDE_STR(name1), 1);
+ #define PRELUDE_NAME(n) rb_usascii_str_new_static(prelude_name##n, sizeof(prelude_name##n)-1)
+ #define PRELUDE_CODE(n) rb_usascii_str_new_static(prelude_code##n.L0, sizeof(prelude_code##n))
+@@ -239,6 +288,13 @@ Init_prelude(void)
+     prelude_eval(PRELUDE_CODE(0), PRELUDE_NAME(0), 1);
+     prelude_eval(PRELUDE_CODE(1), PRELUDE_NAME(1), 1);
  
 +// --------- [Enclose.io Hack start] ---------
 +    prelude_eval(
@@ -272,10 +273,10 @@ index 2a572c2b..2a64a0c3 100644
      printf("%.*s", (int)sizeof(prelude_code0), prelude_code0.L0);
      printf("%.*s", (int)sizeof(prelude_code1), prelude_code1.L0);
 diff --git a/ruby/process.c b/ruby/process.c
-index 0973ea66..cd10aeb4 100644
+index 6ec48290..dc9e5c54 100644
 --- a/ruby/process.c
 +++ b/ruby/process.c
-@@ -7594,6 +7594,12 @@ InitVM_process(void)
+@@ -8044,6 +8044,12 @@ InitVM_process(void)
      rb_define_global_function("exit!", rb_f_exit_bang, -1);
      rb_define_global_function("system", rb_f_system, -1);
      rb_define_global_function("spawn", rb_f_spawn, -1);
@@ -288,7 +289,7 @@ index 0973ea66..cd10aeb4 100644
      rb_define_global_function("sleep", rb_f_sleep, -1);
      rb_define_global_function("exit", rb_f_exit, -1);
      rb_define_global_function("abort", rb_f_abort, -1);
-@@ -8047,3 +8053,65 @@ Init_process(void)
+@@ -8501,3 +8507,65 @@ Init_process(void)
  
      InitVM(process);
  }
@@ -355,10 +356,10 @@ index 0973ea66..cd10aeb4 100644
 +}
 +// --------- [Enclose.IO Hack end] ---------
 diff --git a/ruby/tool/mkconfig.rb b/ruby/tool/mkconfig.rb
-index d6c86b48..bcbda3d2 100755
+index 5da0e7da..d10abbaa 100755
 --- a/ruby/tool/mkconfig.rb
 +++ b/ruby/tool/mkconfig.rb
-@@ -124,6 +124,22 @@
+@@ -127,6 +127,22 @@
        val = '"$(SDKROOT)"'+val if /darwin/ =~ arch
      end
      v = "  CONFIG[\"#{name}\"] #{eq} #{val}\n"
@@ -382,7 +383,7 @@ index d6c86b48..bcbda3d2 100755
        v_fast << v
      else
 diff --git a/ruby/util.c b/ruby/util.c
-index 2222744f..d4544d34 100644
+index df19fd4c..d52e9a51 100644
 --- a/ruby/util.c
 +++ b/ruby/util.c
 @@ -30,6 +30,10 @@
@@ -397,7 +398,7 @@ index 2222744f..d4544d34 100644
  ruby_scan_oct(const char *start, size_t len, size_t *retlen)
  {
 diff --git a/ruby/win32/file.c b/ruby/win32/file.c
-index 6f157d4d..01e018ba 100644
+index 446720c2..064f730a 100644
 --- a/ruby/win32/file.c
 +++ b/ruby/win32/file.c
 @@ -10,6 +10,10 @@
@@ -412,10 +413,10 @@ index 6f157d4d..01e018ba 100644
  # define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
  #endif
 diff --git a/ruby/win32/win32.c b/ruby/win32/win32.c
-index 5cb842ff..9fed223e 100644
+index d28bd564..09f26178 100644
 --- a/ruby/win32/win32.c
 +++ b/ruby/win32/win32.c
-@@ -55,6 +55,11 @@
+@@ -56,6 +56,11 @@
  #include "id.h"
  #include "internal.h"
  #include "encindex.h"
@@ -468,7 +469,7 @@ index 5cb842ff..9fed223e 100644
      //
      // Now set up the correct time stuff
      //
-@@ -1827,6 +1859,9 @@ w32_cmdvector(const WCHAR *cmd, char ***vec, UINT cp, rb_encoding *enc)
+@@ -1867,6 +1899,9 @@ w32_cmdvector(const WCHAR *cmd, char ***vec, UINT cp, rb_encoding *enc)
  	curr = (NtCmdLineElement *)calloc(sizeof(NtCmdLineElement), 1);
  	if (!curr) goto do_nothing;
  	curr->str = rb_w32_wstr_to_mbstr(cp, base, len, &curr->len);
@@ -478,7 +479,7 @@ index 5cb842ff..9fed223e 100644
  	curr->flags |= NTMALLOC;
  
  	if (globbing && (tail = cmdglob(curr, cmdtail, cp, enc))) {
-@@ -6980,6 +7015,11 @@ rb_w32_read(int fd, void *buf, size_t size)
+@@ -7040,6 +7075,11 @@ rb_w32_read(int fd, void *buf, size_t size)
  	return -1;
      }
  

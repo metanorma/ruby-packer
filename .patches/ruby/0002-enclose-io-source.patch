@@ -1,4 +1,4 @@
-From 0f4ff7577094e330d06ce74e6128f5d23a361ae6 Mon Sep 17 00:00:00 2001
+From 00a51b12f106bc679f816cf248947283826bad9c Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:46:16 +0300
 Subject: [PATCH 2/8] enclose io source
@@ -26,10 +26,10 @@ Subject: [PATCH 2/8] enclose io source
  create mode 100644 ruby/include/enclose_io_winapi.h
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 2b39acac..51e908fd 100644
+index 0608fa72..8879940c 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -90,6 +90,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
+@@ -94,6 +94,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
  		squash_table.$(OBJEXT) \
  		squash_traverse.$(OBJEXT) \
  		squash_util.$(OBJEXT) \
@@ -37,8 +37,8 @@ index 2b39acac..51e908fd 100644
 +		enclose_io_unix.$(OBJEXT) \
 +		enclose_io_win32.$(OBJEXT) \
  		array.$(OBJEXT) \
+ 		ast.$(OBJEXT) \
  		bignum.$(OBJEXT) \
- 		class.$(OBJEXT) \
 diff --git a/ruby/enclose_io_memfs.c b/ruby/enclose_io_memfs.c
 new file mode 100644
 index 00000000..6a650308
