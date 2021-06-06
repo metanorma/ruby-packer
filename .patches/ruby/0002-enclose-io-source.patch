@@ -1,50 +1,56 @@
-From 0f4ff7577094e330d06ce74e6128f5d23a361ae6 Mon Sep 17 00:00:00 2001
+From cd5d4d771ca139cdfd9e132d26e9b2a89e2e9d15 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:46:16 +0300
 Subject: [PATCH 2/8] enclose io source
 
 ---
- ruby/common.mk                    |    3 +
- ruby/enclose_io_memfs.c           |   55 ++
- ruby/enclose_io_unix.c            | 1124 +++++++++++++++++++++++++
- ruby/enclose_io_win32.c           | 1276 +++++++++++++++++++++++++++++
- ruby/include/enclose_io.h         |   17 +
- ruby/include/enclose_io_common.h  |  352 ++++++++
- ruby/include/enclose_io_prelude.h |   19 +
- ruby/include/enclose_io_unix.h    |   47 ++
- ruby/include/enclose_io_win32.h   |   72 ++
- ruby/include/enclose_io_winapi.h  |  246 ++++++
- 10 files changed, 3211 insertions(+)
- create mode 100644 ruby/enclose_io_memfs.c
+ ruby/common.mk            |    4 +-
+ ruby/enclose_io.h         |   17 +
+ ruby/enclose_io_common.h  |  372 ++++++++++
+ ruby/enclose_io_prelude.h |   19 +
+ ruby/enclose_io_unix.c    | 1435 +++++++++++++++++++++++++++++++++++++
+ ruby/enclose_io_unix.h    |   48 ++
+ ruby/enclose_io_win32.c   | 1325 ++++++++++++++++++++++++++++++++++
+ ruby/enclose_io_win32.h   |   74 ++
+ ruby/enclose_io_winapi.h  |  246 +++++++
+ 9 files changed, 3539 insertions(+), 1 deletion(-)
+ create mode 100644 ruby/enclose_io.h
+ create mode 100644 ruby/enclose_io_common.h
+ create mode 100644 ruby/enclose_io_prelude.h
  create mode 100644 ruby/enclose_io_unix.c
+ create mode 100644 ruby/enclose_io_unix.h
  create mode 100644 ruby/enclose_io_win32.c
- create mode 100644 ruby/include/enclose_io.h
- create mode 100644 ruby/include/enclose_io_common.h
- create mode 100644 ruby/include/enclose_io_prelude.h
- create mode 100644 ruby/include/enclose_io_unix.h
- create mode 100644 ruby/include/enclose_io_win32.h
- create mode 100644 ruby/include/enclose_io_winapi.h
+ create mode 100644 ruby/enclose_io_win32.h
+ create mode 100644 ruby/enclose_io_winapi.h
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 2b39acac..51e908fd 100644
+index d1e6e0a7..8c1f865e 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -90,6 +90,9 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
+@@ -101,6 +101,8 @@ COMMONOBJS    = squash_cache.$(OBJEXT) \
  		squash_table.$(OBJEXT) \
  		squash_traverse.$(OBJEXT) \
  		squash_util.$(OBJEXT) \
-+		enclose_io_memfs.$(OBJEXT) \
 +		enclose_io_unix.$(OBJEXT) \
 +		enclose_io_win32.$(OBJEXT) \
  		array.$(OBJEXT) \
+ 		ast.$(OBJEXT) \
  		bignum.$(OBJEXT) \
- 		class.$(OBJEXT) \
-diff --git a/ruby/enclose_io_memfs.c b/ruby/enclose_io_memfs.c
+@@ -371,7 +373,7 @@ $(LIBRUBY_EXTS):
+ 
+ $(STATIC_RUBY)$(EXEEXT): $(MAINOBJ) $(DLDOBJS) $(EXTOBJS) $(LIBRUBY_A)
+ 	$(Q)$(RM) $@
+-	$(PURIFY) $(CC) $(MAINOBJ) $(DLDOBJS) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(OUTFLAG)$@ $(LDFLAGS) $(XLDFLAGS)
++	$(PURIFY) $(CC) $(MAINOBJ) $(DLDOBJS) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(OUTFLAG)$@ $(LDFLAGS) $(XLDFLAGS) enclose_io_memfs.$(OBJEXT)
+ 
+ ruby.imp: $(COMMONOBJS)
+ 	$(Q){ \
+diff --git a/ruby/enclose_io.h b/ruby/enclose_io.h
 new file mode 100644
-index 00000000..6a650308
+index 00000000..741205de
 --- /dev/null
-+++ b/ruby/enclose_io_memfs.c
-@@ -0,0 +1,55 @@
++++ b/ruby/enclose_io.h
+@@ -0,0 +1,17 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
@@ -53,62 +59,427 @@ index 00000000..6a650308
 + * For full terms see the included LICENSE file
 + */
 +
++#ifndef RUBY_PACKER_H_999BC1DA
++#define RUBY_PACKER_H_999BC1DA
++
++#include "enclose_io_prelude.h"
++#include "enclose_io_common.h"
++#include "enclose_io_win32.h"
++#include "enclose_io_unix.h"
++
++#endif
+diff --git a/ruby/enclose_io_common.h b/ruby/enclose_io_common.h
+new file mode 100644
+index 00000000..5bab7423
+--- /dev/null
++++ b/ruby/enclose_io_common.h
+@@ -0,0 +1,372 @@
++/*
++ * Copyright (c) 2017 - 2020 Minqi Pan <pmq2001@gmail.com>
++ *                           Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef ENCLOSE_IO_COMMON_H_39323079
++#define ENCLOSE_IO_COMMON_H_39323079
++
++#include "squash.h"
++
++#ifndef __USE_XOPEN_EXTENDED
++#define __USE_XOPEN_EXTENDED
++#endif
++
++#include <stdlib.h>
 +#include <stdint.h>
 +#include <stddef.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <fcntl.h>
++#include <stdarg.h>
++#include <assert.h>
++#include <limits.h> /* PATH_MAX */
 +
-+const uint8_t enclose_io_memfs[4096] = { 104
-+,115,113,115,21,0,0,0,182,118,124,88,0,0,2,0,1,0,0,0,1,0,17,0,192,0,1,0,4,0,0,0,136,2,0,0,0,0,0,0,128,6,0,0,0,0,0,0,120,6,0,0,0,0,0,0,255,255,255,255,255,255,255,255,218,3,0,0,0,0,0,0,11,5,0,0,0,0,0,0,31,6,0,0,0,0,0,0,106,6,0,0,0,0,0,0,120,218,133,84,75,111
-+,227,54,16,62,71,191,98,144,75,19,212,49,108,55,217,118,219,83,30,219,194,192,166,27,192,105,123,48,124,24,75,99,139,49,197,209,146,35,59,250,247,157,161,156,174,177,221,162,128,14,146,72,14,191,215,204,29,75,228,68,61,194,125,221,197,178,134,53,55,107,23,182,69,241,41,192,116,10,15,84,82,179,166,8,179,201,244,221,8,16,82,231,74,87,81,222,167,191,119,206,123
-+,170,0,5,60,97,18,152,221,64,75,220,122,2,12,21,184,240,210,69,93,190,126,15,44,53,197,100,27,23,50,134,39,18,61,108,91,242,23,118,254,187,244,134,224,162,228,166,225,224,123,216,5,62,4,192,4,31,252,213,221,87,64,151,63,172,46,13,79,89,99,75,30,2,189,10,8,195,2,93,16,120,196,184,179,130,220,138,43,225,83,148,154,43,126,133,123,84,16,85,68,63
-+,130,68,138,132,55,160,63,254,181,237,137,91,26,41,118,221,239,34,107,157,219,245,26,147,67,168,92,146,232,74,69,252,97,219,183,162,43,79,145,146,170,17,100,164,155,42,197,241,43,138,96,13,228,175,22,46,185,17,112,128,71,14,21,246,144,183,185,141,83,57,236,210,163,126,74,110,54,187,234,9,227,21,251,74,129,215,13,119,170,74,141,27,247,89,143,214,216,52,122,226,177
-+,75,130,27,28,193,161,102,168,177,130,3,199,112,226,198,158,146,162,58,222,10,145,90,142,146,47,82,150,82,71,34,104,40,100,189,81,143,54,24,180,200,94,65,144,253,141,74,194,118,43,227,146,67,160,82,156,194,62,56,169,51,82,99,84,238,126,1,57,240,63,46,70,59,171,49,129,196,221,182,214,171,231,139,249,2,74,143,206,208,106,189,150,67,114,107,231,157,244,176,225,120
-+,82,104,188,188,94,45,111,86,240,92,187,4,250,216,202,198,69,205,142,232,225,252,89,14,65,168,85,156,140,48,107,85,141,151,239,86,69,145,61,25,12,233,241,174,147,216,217,203,248,165,221,22,199,252,168,171,139,197,105,196,44,94,70,78,35,60,41,62,114,137,198,239,44,215,80,87,71,131,205,163,193,211,226,1,133,206,190,14,126,49,157,252,60,153,192,197,31,207,247,223,79
-+,102,250,122,89,220,102,50,32,125,75,197,221,177,103,254,34,52,222,103,167,174,20,15,154,180,58,157,205,110,138,223,57,92,109,80,208,15,125,225,40,21,215,239,139,39,138,45,73,68,225,152,206,254,199,255,98,158,60,54,154,213,133,40,76,99,58,143,248,57,147,52,221,62,210,30,53,253,23,71,31,46,151,211,213,114,166,154,21,34,82,124,59,159,118,44,19,119,154,137,147,52
-+,39,116,21,156,255,169,60,184,83,143,40,70,142,46,53,102,216,96,252,1,183,214,247,91,237,55,179,206,92,227,46,72,236,143,125,151,50,42,197,237,93,147,142,13,163,153,242,30,168,161,184,37,208,86,226,176,61,90,212,176,38,170,11,206,98,184,137,220,104,65,189,41,57,233,178,89,227,115,200,193,70,159,24,42,82,126,54,85,16,66,94,85,65,91,138,142,43,19,68,229,139
-+,193,0,14,169,179,232,107,247,165,241,114,106,233,177,214,134,103,60,96,165,195,4,230,243,255,26,1,95,162,116,235,233,85,17,70,109,255,33,235,54,101,106,210,59,49,244,58,70,74,193,104,218,109,108,48,88,223,148,216,37,5,183,238,79,50,111,122,246,6,202,9,156,43,177,192,2,47,106,41,228,153,162,115,83,101,120,235,146,183,57,220,125,115,85,251,95,103,107,56,170,178
-+,156,254,184,250,66,167,212,35,169,214,206,7,19,79,39,85,107,88,127,83,9,202,97,28,107,167,187,253,208,232,57,243,195,124,160,61,153,96,170,208,79,170,16,218,12,16,117,85,47,109,176,202,33,107,72,50,223,10,50,53,195,82,50,239,6,149,217,234,141,139,191,1,189,36,47,247,47,1,120,218,99,98,88,194,200,0,4,95,20,131,34,152,24,80,193,51,102,6,6,102,134
-+,255,96,121,203,178,154,8,22,32,13,226,176,3,113,126,81,102,90,102,78,42,178,52,43,84,154,13,136,115,82,203,82,115,12,145,101,217,208,101,141,152,160,86,135,26,149,69,176,163,89,11,178,10,89,55,7,84,55,80,138,161,56,199,24,89,138,19,69,10,197,78,46,20,41,35,70,134,183,96,169,169,166,101,17,204,80,203,64,126,206,132,42,131,57,200,89,43,40,130,23,201
-+,65,175,128,138,213,153,64,106,254,130,229,95,0,229,121,144,244,203,51,164,49,112,51,32,228,229,85,130,34,248,144,228,153,25,154,192,242,48,243,23,2,245,11,34,153,47,8,12,19,11,52,15,11,67,221,36,13,196,122,122,250,80,100,0,132,38,14,197,249,185,169,37,25,153,121,233,38,250,48,43,31,3,141,20,66,178,82,1,104,165,0,146,147,246,1,229,5,160,242,32,175
-+,27,48,204,103,224,71,146,15,0,202,243,35,201,75,49,156,1,59,25,217,73,34,80,39,129,156,142,225,18,152,65,213,192,176,229,134,26,4,74,16,33,12,143,193,154,96,242,125,64,131,24,161,242,160,72,54,99,48,97,20,69,147,23,69,114,136,54,67,58,163,24,144,6,0,60,185,85,104,1,1,120,218,69,79,91,78,194,64,20,189,119,10,21,34,38,24,22,32,11,32,132
-+,66,255,229,199,196,15,183,96,38,45,29,202,36,243,64,90,76,140,91,112,7,238,195,95,215,224,10,220,128,123,208,211,151,157,201,201,61,247,220,119,72,205,27,0,115,32,160,33,25,245,172,76,116,75,220,123,235,71,18,189,183,121,5,23,20,146,63,233,189,54,234,29,229,149,80,152,232,3,57,13,93,127,33,161,161,155,118,8,93,1,19,38,136,23,116,151,191,28,75,157,184
-+,46,54,3,222,184,218,96,68,133,183,170,60,104,151,115,27,188,6,76,93,56,160,36,245,231,242,147,25,251,93,146,243,153,146,214,103,103,163,138,174,211,20,248,70,50,35,253,152,184,160,149,39,192,162,150,167,180,92,225,199,219,255,57,241,3,139,250,222,101,170,221,47,7,224,67,218,90,237,158,244,141,24,65,31,247,59,197,162,109,216,219,144,82,111,81,153,255,16,215,109,50
-+,125,90,221,139,113,199,163,110,181,234,158,131,168,236,140,164,84,110,103,124,161,164,246,210,42,187,47,164,252,3,179,248,65,197,15,0,120,218,75,96,128,128,42,102,8,13,0,9,245,0,222,14,6,0,0,0,0,0,0,65,0,120,218,203,96,98,64,1,111,160,180,2,148,182,135,210,177,80,186,26,74,207,134,210,219,160,244,69,40,237,1,53,79,135,17,66,243,64,105,31,40
-+,253,31,74,223,135,210,57,80,122,63,148,238,129,210,242,80,115,58,160,52,0,39,61,9,198,39,6,0,0,0,0,0,0,4,128,232,3,0,0,114,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+};
++#ifdef __linux__
++#include <linux/limits.h> /* PATH_MAX */
++#endif
 +
-diff --git a/ruby/enclose_io_unix.c b/ruby/enclose_io_unix.c
++#ifdef _WIN32
++#include <direct.h>
++#include <Shlwapi.h>
++#else
++#include <sys/param.h>
++#include <sys/uio.h>
++#include <unistd.h>
++#include <ftw.h>
++#include <dirent.h>
++#include <dlfcn.h>
++#endif
++
++extern sqfs *enclose_io_fs;
++extern sqfs_path enclose_io_cwd;
++
++#define ENCLOSE_IO_PP_NARG(...) \
++    ENCLOSE_IO_PP_NARG_(__VA_ARGS__,ENCLOSE_IO_PP_RSEQ_N())
++#define ENCLOSE_IO_PP_NARG_(...) \
++    ENCLOSE_IO_PP_ARG_N(__VA_ARGS__)
++#define ENCLOSE_IO_PP_ARG_N( \
++     _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
++    _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
++    _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
++    _31,_32,_33,_34,_35,_36,_37,_38,_39,_40, \
++    _41,_42,_43,_44,_45,_46,_47,_48,_49,_50, \
++    _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
++    _61,_62,_63,  N, ...) N
++#define ENCLOSE_IO_PP_RSEQ_N() \
++    63,62,61,60,                   \
++    59,58,57,56,55,54,53,52,51,50, \
++    49,48,47,46,45,44,43,42,41,40, \
++    39,38,37,36,35,34,33,32,31,30, \
++    29,28,27,26,25,24,23,22,21,20, \
++    19,18,17,16,15,14,13,12,11,10, \
++     9, 8, 7, 6, 5, 4, 3, 2, 1, 0
++
++short enclose_io_is_path(char *pathname);
++short enclose_io_is_path_w(wchar_t *pathname);
++short enclose_io_is_relative_w(wchar_t *pathname);
++
++#define ENCLOSE_IO_CONSIDER_MKDIR_WORKDIR_RETURN(PATH, RETURN1, RETURN2) \
++	if (mkdir_workdir) { \
++		sqfs_path mkdir_workdir_expanded; \
++		char *mkdir_workdir_expanded_head; \
++		size_t mkdir_workdir_len; \
++		size_t memcpy_len; \
++		struct stat mkdir_workdir_buf; \
++		mkdir_workdir_len = strlen(mkdir_workdir); \
++		memcpy(mkdir_workdir_expanded, mkdir_workdir, mkdir_workdir_len); \
++		memcpy_len = strlen(PATH); \
++		if (SQUASHFS_PATH_LEN - mkdir_workdir_len < memcpy_len) { \
++			memcpy_len = SQUASHFS_PATH_LEN - mkdir_workdir_len; \
++		} \
++		memcpy(&mkdir_workdir_expanded[mkdir_workdir_len], (PATH), memcpy_len); \
++		mkdir_workdir_expanded[mkdir_workdir_len + memcpy_len] = '\0'; \
++		mkdir_workdir_expanded_head = strstr(mkdir_workdir_expanded, enclose_io_mkdir_scope); \
++		if (mkdir_workdir_expanded_head && '/' == mkdir_workdir_expanded_head[strlen(enclose_io_mkdir_scope)]) { \
++			memmove(mkdir_workdir_expanded_head, mkdir_workdir_expanded_head + strlen(enclose_io_mkdir_scope), strlen(mkdir_workdir_expanded_head + strlen(enclose_io_mkdir_scope)) + 1); \
++			if (0 == stat(mkdir_workdir_expanded, &mkdir_workdir_buf)) { \
++				return(RETURN2); \
++			} \
++		} \
++	} \
++	return(RETURN1)
++
++#define ENCLOSE_IO_GEN_EXPANDED_NAME(path)	\
++			enclose_io_cwd_len = strlen(enclose_io_cwd); \
++			memcpy(enclose_io_expanded, enclose_io_cwd, enclose_io_cwd_len); \
++			memcpy_len = strlen(path); \
++			if (SQUASHFS_PATH_LEN - enclose_io_cwd_len < memcpy_len) { memcpy_len = SQUASHFS_PATH_LEN - enclose_io_cwd_len; } \
++			memcpy(&enclose_io_expanded[enclose_io_cwd_len], (path), memcpy_len); \
++			enclose_io_expanded[enclose_io_cwd_len + memcpy_len] = '\0'
++
++//TODO maybe use WideCharToMultiByte
++#define W_ENCLOSE_IO_PATH_CONVERT(path) \
++			enclose_io_converted = (char *)enclose_io_converted_storage; \
++			enclose_io_converted_length = wcstombs(enclose_io_converted_storage, (path), SQUASHFS_PATH_LEN); \
++			if ((size_t)-1 == enclose_io_converted_length) { enclose_io_converted_length = 0; } \
++			enclose_io_converted[enclose_io_converted_length] = '\0'; \
++			if (strnlen(enclose_io_converted_storage, 4) >= 4 && (0 == strncmp(enclose_io_converted_storage, "\\\\?\\", 4) || 0 == strncmp(enclose_io_converted_storage, "//?/", 4))) { \
++				if (strnlen(enclose_io_converted_storage, 6) >= 6 && ':' == enclose_io_converted_storage[5]) { \
++					enclose_io_converted += 6; \
++				} else { \
++					enclose_io_converted += 4; \
++				} \
++			} else if (strnlen(enclose_io_converted_storage, 3) >= 3 && (0 == strncmp(enclose_io_converted_storage + 1, ":\\", 2) || 0 == strncmp(enclose_io_converted_storage + 1, ":/", 2))) { \
++				enclose_io_converted += 2; \
++			} \
++			for (enclose_io_i = enclose_io_converted; *enclose_io_i; enclose_io_i++) { \
++				if ('\\' == *enclose_io_i) { *enclose_io_i = '/'; } \
++			}
++
++#define ENCLOSE_IO_SET_LAST_ERROR do { \
++			if (ENOMEM == errno) { \
++				SetLastError(ERROR_NOT_ENOUGH_MEMORY); \
++                                _doserrno = ERROR_NOT_ENOUGH_MEMORY; \
++			} else if (ENOENT == errno) { \
++				SetLastError(ERROR_FILE_NOT_FOUND); \
++                                _doserrno = ERROR_FILE_NOT_FOUND; \
++			} else if (EBADF == errno) { \
++				SetLastError(ERROR_INVALID_HANDLE); \
++                                _doserrno = ERROR_INVALID_HANDLE; \
++			} else if (ENAMETOOLONG == errno) { \
++				SetLastError(ERROR_BUFFER_OVERFLOW); \
++                                _doserrno = ERROR_BUFFER_OVERFLOW; \
++			} else { \
++				SetLastError(ERROR_INVALID_FUNCTION); \
++                                _doserrno = ERROR_INVALID_FUNCTION; \
++			} \
++		} while (0)
++
++int enclose_io_exepath(char* buffer, size_t* size);
++int enclose_io_dos_return(int statement);
++short enclose_io_if(const char* path);
++SQUASH_OS_PATH enclose_io_ifextract(const char* path, const char* ext_name);
++void enclose_io_chdir_helper(const char *path);
++int enclose_io_chdir(const char *path);
++char *enclose_io_getcwd(char *buf, size_t size);
++char *enclose_io_getwd(char *buf);
++int enclose_io_stat(const char *path, struct stat *buf);
++int enclose_io_fstat(int fildes, struct stat *buf);
++int enclose_io_open(int nargs, const char *pathname, int flags, ...);
++int enclose_io_openat(int fd, int nargs, const char *pathname, int flags, ...);
++int enclose_io_close(int fildes);
++ssize_t enclose_io_read(int fildes, void *buf, size_t nbyte);
++off_t enclose_io_lseek(int fildes, off_t offset, int whence);
++
++#ifdef _WIN32
++
++#include "enclose_io_winapi.h"
++
++short enclose_io_if_w(const wchar_t* path);
++int enclose_io__open(const char *pathname, int flags);
++int enclose_io__wopen(const wchar_t *pathname, int flags, int mode);
++int enclose_io__wmkdir(wchar_t* pathname);
++int enclose_io_open_osfhandle(intptr_t osfhandle, int flags);
++intptr_t enclose_io_get_osfhandle(int fd);
++int enclose_io_wchdir(const wchar_t *path);
++wchar_t *enclose_io_wgetcwd(wchar_t *buf, size_t size);
++int enclose_io_fstati64(int fildes, struct _stati64 *buf);
++__int64 enclose_io_lseeki64(int fildes, __int64 offset, int whence);
++
++HANDLE
++EncloseIOCreateFileW(
++	LPCWSTR lpFileName,
++	DWORD dwDesiredAccess,
++	DWORD dwShareMode,
++	LPSECURITY_ATTRIBUTES lpSecurityAttributes,
++	DWORD dwCreationDisposition,
++	DWORD dwFlagsAndAttributes,
++	HANDLE hTemplateFile
++);
++
++NTSTATUS
++EncloseIOpNtQueryDirectoryFile(
++	HANDLE FileHandle,
++	HANDLE Event,
++	PIO_APC_ROUTINE ApcRoutine,
++	PVOID ApcContext,
++	PIO_STATUS_BLOCK IoStatusBlock,
++	PVOID FileInformation,
++	ULONG Length,
++	FILE_INFORMATION_CLASS FileInformationClass,
++	BOOLEAN ReturnSingleEntry,
++	PUNICODE_STRING FileName,
++	BOOLEAN RestartScan
++);
++
++BOOL
++EncloseIOCloseHandle(
++	HANDLE hObject
++);
++
++DWORD
++EncloseIOGetFileAttributesW(
++    LPCWSTR lpFileName
++);
++
++BOOL
++EncloseIOGetFileAttributesExW(
++    LPCWSTR lpFileName,
++    GET_FILEEX_INFO_LEVELS fInfoLevelId,
++    LPVOID lpFileInformation
++);
++
++NTSTATUS
++EncloseIOpNtQueryInformationFile(
++	HANDLE FileHandle,
++	PIO_STATUS_BLOCK IoStatusBlock,
++	PVOID FileInformation,
++	ULONG Length,
++	FILE_INFORMATION_CLASS FileInformationClass);
++
++NTSTATUS
++EncloseIOpNtQueryVolumeInformationFile(
++	HANDLE FileHandle,
++	PIO_STATUS_BLOCK IoStatusBlock,
++	PVOID FsInformation,
++	ULONG Length,
++	FS_INFORMATION_CLASS FsInformationClass);
++
++BOOL
++EncloseIOReadFile(
++	HANDLE       hFile,
++	LPVOID       lpBuffer,
++	DWORD        nNumberOfBytesToRead,
++	LPDWORD      lpNumberOfBytesRead,
++	LPOVERLAPPED lpOverlapped
++);
++
++BOOL
++EncloseIOGetHandleInformation(
++    HANDLE hObject,
++    LPDWORD lpdwFlags
++);
++
++DWORD
++EncloseIOGetFileType(
++        HANDLE hFile
++);
++
++HANDLE
++EncloseIOFindFirstFileW(
++        LPCWSTR lpFileName,
++        LPWIN32_FIND_DATAW lpFindFileData
++);
++
++BOOL
++EncloseIOFindNextFileW(
++        HANDLE hFindFile,
++        LPWIN32_FIND_DATAW lpFindFileData
++);
++
++BOOL
++EncloseIOFindClose(
++        HANDLE hFindFile
++);
++
++BOOL
++EncloseIODeviceIoControl(
++        HANDLE hDevice,
++        DWORD dwIoControlCode,
++        LPVOID lpInBuffer,
++        DWORD nInBufferSize,
++        LPVOID lpOutBuffer,
++        DWORD nOutBufferSize,
++        LPDWORD lpBytesReturned,
++        LPOVERLAPPED lpOverlapped
++);
++
++HANDLE
++EncloseIOCreateIoCompletionPort(
++        HANDLE FileHandle,
++        HANDLE ExistingCompletionPort,
++        ULONG_PTR CompletionKey,
++        DWORD NumberOfConcurrentThreads
++);
++
++BOOL
++EncloseIOReadDirectoryChangesW(
++        HANDLE hDirectory,
++        LPVOID lpBuffer,
++        DWORD nBufferLength,
++        BOOL bWatchSubtree,
++        DWORD dwNotifyFilter,
++        LPDWORD lpBytesReturned,
++        LPOVERLAPPED lpOverlapped,
++        LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
++);
++
++HMODULE
++EncloseIOLoadLibraryExW(
++	LPCWSTR lpLibFileName,
++	HANDLE hFile,
++	DWORD dwFlags
++);
++
++BOOL
++EncloseIOCreateProcessW(
++	LPCWSTR lpApplicationName,
++	LPWSTR lpCommandLine,
++	LPSECURITY_ATTRIBUTES lpProcessAttributes,
++	LPSECURITY_ATTRIBUTES lpThreadAttributes,
++	BOOL bInheritHandles,
++	DWORD dwCreationFlags,
++	LPVOID lpEnvironment,
++	LPCWSTR lpCurrentDirectory,
++	LPSTARTUPINFOW lpStartupInfo,
++	LPPROCESS_INFORMATION lpProcessInformation
++);
++	
++BOOL
++EncloseIOSetCurrentDirectoryW(
++	LPCWSTR lpPathName
++);
++
++DWORD
++EncloseIOGetCurrentDirectoryW(
++	DWORD nBufferLength,
++	LPWSTR lpBuffer
++);
++
++DWORD
++EncloseIOGetFullPathNameW(
++	LPCWSTR lpFileName,
++	DWORD nBufferLength,
++	LPWSTR lpBuffer,
++	LPWSTR* lpFilePart
++);
++
++BOOL
++EncloseIOGetFileInformationByHandle(
++	HANDLE hFile,
++	LPBY_HANDLE_FILE_INFORMATION lpFileInformation
++);
++
++#else // ifdef _WIN32
++int enclose_io_lstat(const char *path, struct stat *buf);
++ssize_t enclose_io_readlink(const char *path, char *buf, size_t bufsize);
++DIR * enclose_io_opendir(const char *filename);
++DIR * enclose_io_fdopendir(int fd);
++int enclose_io_closedir(DIR *dirp);
++struct SQUASH_DIRENT * enclose_io_readdir(DIR *dirp);
++long enclose_io_telldir(DIR *dirp);
++void enclose_io_seekdir(DIR *dirp, long loc);
++void enclose_io_rewinddir(DIR *dirp);
++int enclose_io_dirfd(DIR *dirp);
++int enclose_io_scandir(const char *dirname, struct SQUASH_DIRENT ***namelist,
++	int(*select)(const struct SQUASH_DIRENT *),
++	int(*compar)(const struct SQUASH_DIRENT **, const struct SQUASH_DIRENT **));
++ssize_t enclose_io_pread(int d, void *buf, size_t nbyte, off_t offset);
++ssize_t enclose_io_readv(int d, const struct iovec *iov, int iovcnt);
++void* enclose_io_dlopen(const char* path, int mode);
++int enclose_io_access(const char *path, int mode);
++int enclose_io_mkdir(const char *path, mode_t mode);
++int enclose_io_execv(const char *path, char *const argv[]);
++
++#endif // ifdef _WIN32
++
++#endif
+diff --git a/ruby/enclose_io_prelude.h b/ruby/enclose_io_prelude.h
 new file mode 100644
-index 00000000..ffb7359f
+index 00000000..133d44f1
 --- /dev/null
-+++ b/ruby/enclose_io_unix.c
-@@ -0,0 +1,1124 @@
++++ b/ruby/enclose_io_prelude.h
+@@ -0,0 +1,19 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
 + *                    Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef ENCLOSE_IO_PRELUDE_H_E46A560C
++#define ENCLOSE_IO_PRELUDE_H_E46A560C
++
++#ifdef _WIN32
++#define WINDOWS_H_A80B5674
++typedef unsigned short sqfs_mode_t;
++typedef uint32_t sqfs_id_t;
++typedef DWORD64 sqfs_off_t;
++#endif // _WIN32
++
++#endif /* end of include guard: ENCLOSE_IO_PRELUDE_H_E46A560C */
+diff --git a/ruby/enclose_io_unix.c b/ruby/enclose_io_unix.c
+new file mode 100644
+index 00000000..7ee07b77
+--- /dev/null
++++ b/ruby/enclose_io_unix.c
+@@ -0,0 +1,1435 @@
++/*
++ * Copyright (c) 2017 - 2020 Minqi Pan <pmq2001@gmail.com>
++ *                           Shengyuan Liu <sounder.liu@gmail.com>
 + *
 + * This file is part of libsquash, distributed under the MIT License
 + * For full terms see the included LICENSE file
@@ -117,8 +488,28 @@ index 00000000..ffb7359f
 +#include "enclose_io_common.h"
 +
 +#ifdef _WIN32
++#include <assert.h>
++#include <direct.h>
++#include <limits.h>
++#include <stdio.h>
++#include <string.h>
++#include <time.h>
++#include <wchar.h>
++#include <windows.h>
 +#define MAXPATHLEN 4096
 +#define mode_t unsigned int
++#endif
++
++#ifdef __linux__
++#include <unistd.h>
++#endif
++
++#ifdef __APPLE__
++#include <unistd.h>
++#include <string.h>
++#include <stdlib.h>
++#include <mach-o/dyld.h>
++#include <limits.h>  // PATH_MAX
 +#endif
 +
 +sqfs *enclose_io_fs;
@@ -126,7 +517,6 @@ index 00000000..ffb7359f
 +SQUASH_OS_PATH generic_mkdir_workdir = NULL;
 +char *mkdir_workdir = NULL; /* must NOT end with a slash */
 +char *enclose_io_mkdir_scope = "/__enclose_io_memfs__"; /* must NOT end with a slash */
-+
 +
 +#ifdef _WIN32
 +#include <shellapi.h>
@@ -197,7 +587,7 @@ index 00000000..ffb7359f
 +				mkdir_workdir = NULL;
 +				free(generic_mkdir_workdir);
 +				generic_mkdir_workdir = NULL;
-+				return -1;
++				return NULL;
 +			}
 +			if (mkdir(mkdir_workdir)) {
 +				free(mkdir_workdir);
@@ -386,6 +776,55 @@ index 00000000..ffb7359f
 +	}
 +}
 +#else
++int enclose_io__exec(const char *path, char *const argv[])
++{
++	int i, ret, argc;
++	char **new_argv, **argv_memory = NULL;
++	size_t exec_path_len = 2 * PATH_MAX;
++	char* exec_path = (char*)(malloc(exec_path_len));
++
++	ret = enclose_io_exepath(exec_path, &exec_path_len);
++	assert(0 == ret);
++
++	ret = setenv("ENCLOSE_IO_USE_ORIGINAL_RUBY", "true", 1);
++	ret = setenv("ENCLOSE_IO_USE_ORIGINAL_NODE", "true", 1);
++	assert(0 == ret);
++
++	argc = 1;
++	while (argv[argc]) { ++argc; }
++	new_argv = (char **)malloc( (2 + argc) * sizeof(char *));
++	assert(new_argv);
++	new_argv[0] = argv[0];
++	new_argv[1] = path;
++	for (i = 1; i < argc; ++i) {
++		new_argv[2 + i - 1] = argv[i];
++	}
++	new_argv[2 + argc - 1] = NULL;
++
++	ret = execv(exec_path, new_argv);
++
++	free(exec_path);
++	free(new_argv);
++	return ret;
++}
++
++int enclose_io_execv(const char *path, char *const argv[])
++{
++	const char* squash_extracted_path = NULL;
++
++	if (enclose_io_cwd[0] && '/' != *path) {
++		sqfs_path enclose_io_expanded;
++		size_t enclose_io_cwd_len;
++		size_t memcpy_len;
++		ENCLOSE_IO_GEN_EXPANDED_NAME(path);
++		return enclose_io__exec(enclose_io_expanded, argv);
++	} else if (enclose_io_is_path(path)) {
++		return enclose_io__exec(path, argv);
++	} else {
++		return execv(path, argv);
++	}
++}
++
 +int enclose_io_lstat(const char *path, struct stat *buf)
 +{
 +	if (enclose_io_cwd[0] && '/' != *path) {
@@ -490,16 +929,9 @@ index 00000000..ffb7359f
 +	dir->nr = 0;
 +	dir->filename = strdup(file->filename);
 +	dir->fd = fd;
-+
-+	handle = (int *)(squash_global_fdtable.fds[dir->fd]->payload);
-+
-+	MUTEX_LOCK(&squash_global_mutex);
-+	free(handle);
-+	squash_global_fdtable.fds[dir->fd]->payload = (void *)dir;
-+	MUTEX_UNLOCK(&squash_global_mutex);
-+
 +	dir->actual_nr = 0;
 +	dir->loc = 0;
++
 +	error = sqfs_inode_get(fs, &dir->node, sqfs_inode_root(fs));
 +	if (SQFS_OK != error)
 +	{
@@ -520,6 +952,14 @@ index 00000000..ffb7359f
 +	{
 +		goto failure;
 +	}
++	
++	handle = (int *)(squash_global_fdtable.fds[dir->fd]->payload);
++
++	MUTEX_LOCK(&squash_global_mutex);
++	free(handle);
++	squash_global_fdtable.fds[dir->fd]->payload = (void *)dir;
++	MUTEX_UNLOCK(&squash_global_mutex);
++
 +	return dir;
 +failure:
 +	if (!errno) {
@@ -849,6 +1289,17 @@ index 00000000..ffb7359f
 +}
 +
 +#ifdef _WIN32
++short enclose_io_if_w(const wchar_t* path)
++{
++	if (enclose_io_cwd[0] && enclose_io_is_relative_w(path)) {
++		return 1;
++	} else if (enclose_io_is_path_w(path)) {
++		return 1;
++	} else {
++		return 0;
++	}
++}
++
 +BOOL
 +EncloseIOSetCurrentDirectoryW(
 +	LPCWSTR lpPathName
@@ -936,6 +1387,62 @@ index 00000000..ffb7359f
 +		);
 +	}
 +}
++
++DWORD
++EncloseIOGetFullPathNameW(
++	LPCWSTR lpFileName,
++	DWORD nBufferLength,
++	LPWSTR lpBuffer,
++	LPWSTR* lpFilePart
++)
++{
++	DWORD retval = 0;
++
++	if (enclose_io_cwd[0] && enclose_io_is_relative_w(lpFileName)) {
++		sqfs_path enclose_io_expanded;
++		size_t enclose_io_cwd_len;
++		size_t memcpy_len;
++		sqfs_path enclose_io_converted_storage;
++		char *enclose_io_converted;
++		char *enclose_io_i;
++		size_t enclose_io_converted_length;
++
++		wchar_t enclose_io_expanded_w[SQUASHFS_PATH_LEN + 1];
++
++		W_ENCLOSE_IO_PATH_CONVERT(lpFileName);
++		ENCLOSE_IO_GEN_EXPANDED_NAME(enclose_io_converted);
++
++		mbstowcs(enclose_io_expanded_w, enclose_io_expanded, SQUASHFS_PATH_LEN);
++		enclose_io_expanded_w[SQUASHFS_PATH_LEN] = 0;
++
++		retval = GetFullPathNameW(
++			enclose_io_expanded_w,
++			nBufferLength,
++			lpBuffer,
++			lpFilePart
++		);
++	} else {
++		retval = GetFullPathNameW(
++			lpFileName,
++			nBufferLength,
++			lpBuffer,
++			lpFilePart
++		);
++	}
++
++	if (0 == retval || retval > nBufferLength) {
++		return retval;
++	}
++
++	if (0 == wcsncmp(lpBuffer + 1, L":\\__enclose_io_memfs__", 22)) {
++		assert(NULL == lpFilePart); // TODO
++		memmove(lpBuffer, lpBuffer + 2, (retval - 2) * sizeof(wchar_t));
++		return retval - 2;
++	}
++	
++	return retval;
++}
++
 +#endif // _WIN32
 +
 +int enclose_io_stat(const char *path, struct stat *buf)
@@ -1092,15 +1599,6 @@ index 00000000..ffb7359f
 +	}
 +}
 +
-+int enclose_io_openat(int nargs, int fd, const char *pathname, int flags, ...)
-+{
-+	if (fd == AT_FDCWD && enclose_io_if(pathname)) {
-+		return enclose_io_open(nargs, pathname, flags);
-+	}
-+
-+	return openat(fd, pathname, flags);
-+}
-+
 +int enclose_io_close(int fildes)
 +{
 +	if (SQUASH_VALID_VFD(fildes)) {
@@ -1203,6 +1701,9 @@ index 00000000..ffb7359f
 +
 +short enclose_io_is_relative_w(wchar_t *pathname)
 +{
++	if (L'N' == pathname[0] && L'U' == pathname[1] && L'L' == pathname[2] && 0 == pathname[3]) {
++		return 0;
++	}
 +	if (L'\\' == (pathname)[0] ||
 +		L'/' == (pathname)[0]) {
 +		return 0;
@@ -1230,15 +1731,250 @@ index 00000000..ffb7359f
 +	return 1;
 +}
 +#endif
++
++#ifndef _WIN32
++int enclose_io_openat(int nargs, int dirfd, const char* pathname, int flags, ...)
++{
++    if (3 == nargs) {
++        // If pathname is absolute, then dirfd is ignored.
++        if (enclose_io_is_path(pathname)) {
++            return enclose_io_open(nargs, pathname, flags);
++        }
++
++        // If the pathname given in pathname is relative,
++        // then it is interpreted relative to the directory referred to by the file descriptor dirfd
++        // (rather than relative to the current working directory of the calling process, as is done by open(2) for a relative pathname).
++        // TODO: at dirfd
++        if (dirfd == AT_FDCWD && enclose_io_cwd[0] && '/' != *pathname) {
++            return enclose_io_open(nargs, pathname, flags);
++        }
++
++        return openat(dirfd, pathname, flags);
++    }
++    else {
++        va_list args;
++        mode_t mode;
++        assert(4 == nargs);
++        va_start(args, flags);
++        mode = va_arg(args, mode_t);
++        va_end(args);
++
++        // If pathname is absolute, then dirfd is ignored.
++        if (enclose_io_is_path(pathname)) {
++            return enclose_io_open(nargs, pathname, flags, mode);
++        }
++
++        // If the pathname given in pathname is relative,
++        // then it is interpreted relative to the directory referred to by the file descriptor dirfd
++        // (rather than relative to the current working directory of the calling process, as is done by open(2) for a relative pathname).
++        // TODO: at dirfd
++        if (dirfd == AT_FDCWD && enclose_io_cwd[0] && '/' != *pathname) {
++            return enclose_io_open(nargs, pathname, flags, mode);
++        }
++
++        return openat(dirfd, pathname, flags, mode);
++    }
++}
++#endif
++
++/*
++ * enclose_io_exepath is derived from uv_exepath of libuv.
++ * libuv is licensed for use as follows:
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to
++ * deal in the Software without restriction, including without limitation the
++ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
++ * sell copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ * 
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ * 
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
++ * IN THE SOFTWARE.
++ */
++#ifdef _WIN32
++int enclose_io_exepath(char* buffer, size_t* size_ptr) {
++  int utf8_len, utf16_buffer_len, utf16_len;
++  WCHAR* utf16_buffer;
++  int err;
++
++  if (buffer == NULL || size_ptr == NULL || *size_ptr == 0) {
++    return -1;
++  }
++
++  if (*size_ptr > 32768) {
++    /* Windows paths can never be longer than this. */
++    utf16_buffer_len = 32768;
++  } else {
++    utf16_buffer_len = (int) *size_ptr;
++  }
++
++  utf16_buffer = (WCHAR*) malloc(sizeof(WCHAR) * utf16_buffer_len);
++  if (!utf16_buffer) {
++    return -1;
++  }
++
++  /* Get the path as UTF-16. */
++  utf16_len = GetModuleFileNameW(NULL, utf16_buffer, utf16_buffer_len);
++  if (utf16_len <= 0) {
++    err = GetLastError();
++    goto error;
++  }
++
++  /* utf16_len contains the length, *not* including the terminating null. */
++  utf16_buffer[utf16_len] = L'\0';
++
++  /* Convert to UTF-8 */
++  utf8_len = WideCharToMultiByte(CP_UTF8,
++                                 0,
++                                 utf16_buffer,
++                                 -1,
++                                 buffer,
++                                 (int) *size_ptr,
++                                 NULL,
++                                 NULL);
++  if (utf8_len == 0) {
++    err = GetLastError();
++    goto error;
++  }
++
++  free(utf16_buffer);
++
++  /* utf8_len *does* include the terminating null at this point, but the */
++  /* returned size shouldn't. */
++  *size_ptr = utf8_len - 1;
++  return 0;
++
++ error:
++  free(utf16_buffer);
++  return -1;
++}
++
++#endif
++
++#ifdef __linux__
++int enclose_io_exepath(char* buffer, size_t* size) {
++  ssize_t n;
++
++  if (buffer == NULL || size == NULL || *size == 0)
++    return -1;
++
++  n = *size - 1;
++  if (n > 0)
++    n = readlink("/proc/self/exe", buffer, n);
++
++  if (n == -1)
++    return -1;
++
++  buffer[n] = '\0';
++  *size = n;
++
++  return 0;
++}
++#endif
++
++#ifdef __APPLE__
++int enclose_io_exepath(char* buffer, size_t* size) {
++  /* realpath(exepath) may be > PATH_MAX so double it to be on the safe side. */
++  char abspath[PATH_MAX * 2 + 1];
++  char exepath[PATH_MAX + 1];
++  uint32_t exepath_size;
++  size_t abspath_size;
++
++  if (buffer == NULL || size == NULL || *size == 0)
++    return -1;
++
++  exepath_size = sizeof(exepath);
++  if (_NSGetExecutablePath(exepath, &exepath_size))
++    return -1;
++
++  if (realpath(exepath, abspath) != abspath)
++    return -1;
++
++  abspath_size = strlen(abspath);
++  if (abspath_size == 0)
++    return -1;
++
++  *size -= 1;
++  if (*size > abspath_size)
++    *size = abspath_size;
++
++  memcpy(buffer, abspath, *size);
++  buffer[*size] = '\0';
++
++  return 0;
++}
++#endif
+diff --git a/ruby/enclose_io_unix.h b/ruby/enclose_io_unix.h
+new file mode 100644
+index 00000000..291f5277
+--- /dev/null
++++ b/ruby/enclose_io_unix.h
+@@ -0,0 +1,48 @@
++/*
++ * Copyright (c) 2017 - 2020 Minqi Pan <pmq2001@gmail.com>
++ *                           Shengyuan Liu <sounder.liu@gmail.com>
++ *
++ * This file is part of libsquash, distributed under the MIT License
++ * For full terms see the included LICENSE file
++ */
++
++#ifndef ENCLOSE_IO_UNIX_H_E0229A03
++#define ENCLOSE_IO_UNIX_H_E0229A03
++#ifndef __cplusplus
++#ifndef _WIN32
++
++	#ifdef dirfd
++		#undef dirfd
++	#endif
++
++	#define getcwd(...)	enclose_io_getcwd(__VA_ARGS__)
++	#define getwd(...)	enclose_io_getwd(__VA_ARGS__)
++	#define chdir(...)	enclose_io_chdir(__VA_ARGS__)
++	#define stat(...)	enclose_io_stat(__VA_ARGS__)
++	#define fstat(...)	enclose_io_fstat(__VA_ARGS__)
++	#define lstat(...)	enclose_io_lstat(__VA_ARGS__)
++	#define open(...)	enclose_io_open(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
++	#define openat(...)	enclose_io_openat(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
++	#define close(...)	enclose_io_close(__VA_ARGS__)
++	#define read(...)	enclose_io_read(__VA_ARGS__)
++	#define lseek(...)	enclose_io_lseek(__VA_ARGS__)
++	#define readlink(...)	enclose_io_readlink(__VA_ARGS__)
++	#define opendir(...)	enclose_io_opendir(__VA_ARGS__)
++	#define fdopendir(...)	enclose_io_fdopendir(__VA_ARGS__)
++	#define closedir(...)	enclose_io_closedir(__VA_ARGS__)
++	#define readdir(...)	enclose_io_readdir(__VA_ARGS__)
++	#define telldir(...)	enclose_io_telldir(__VA_ARGS__)
++	#define seekdir(...)	enclose_io_seekdir(__VA_ARGS__)
++	#define rewinddir(...)	enclose_io_rewinddir(__VA_ARGS__)
++	#define dirfd(...)	enclose_io_dirfd(__VA_ARGS__)
++	#define scandir(...)	enclose_io_scandir(__VA_ARGS__)
++	#define pread(...)	enclose_io_pread(__VA_ARGS__)
++	#define readv(...)	enclose_io_readv(__VA_ARGS__)
++	#define dlopen(...)	enclose_io_dlopen(__VA_ARGS__)
++	#define access(...)	enclose_io_access(__VA_ARGS__)
++	#define mkdir(...)	enclose_io_mkdir(__VA_ARGS__)
++	#define execv(...)	enclose_io_execv(__VA_ARGS__)
++
++#endif // !_WIN32
++#endif //!__cplusplus
++#endif
 diff --git a/ruby/enclose_io_win32.c b/ruby/enclose_io_win32.c
 new file mode 100644
-index 00000000..f13fa6cb
+index 00000000..85528ddd
 --- /dev/null
 +++ b/ruby/enclose_io_win32.c
-@@ -0,0 +1,1276 @@
+@@ -0,0 +1,1325 @@
 +/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ * Copyright (c) 2017 - 2020 Minqi Pan <pmq2001@gmail.com>
++ *                           Shengyuan Liu <sounder.liu@gmail.com>
 + *
 + * This file is part of libsquash, distributed under the MIT License
 + * For full terms see the included LICENSE file
@@ -1580,11 +2316,13 @@ index 00000000..f13fa6cb
 +					);
 +				} else {
 +					errno = ENOENT;
-+					return enclose_io_dos_return(-1);
++                                        ENCLOSE_IO_SET_LAST_ERROR;
++                                        return INVALID_HANDLE_VALUE;
 +				}
 +			} else {
 +				errno = ENOENT;
-+				return enclose_io_dos_return(-1);
++                                ENCLOSE_IO_SET_LAST_ERROR;
++                                return INVALID_HANDLE_VALUE;
 +			}
 +		}
 +	} else if (enclose_io_is_path_w(lpFileName)) {
@@ -1651,11 +2389,13 @@ index 00000000..f13fa6cb
 +					);
 +				} else {
 +					errno = ENOENT;
-+					return enclose_io_dos_return(-1);
++                                        ENCLOSE_IO_SET_LAST_ERROR;
++                                        return INVALID_HANDLE_VALUE;
 +				}
 +			} else {
 +				errno = ENOENT;
-+				return enclose_io_dos_return(-1);
++                                ENCLOSE_IO_SET_LAST_ERROR;
++                                return INVALID_HANDLE_VALUE;
 +			}
 +		}
 +	} else {
@@ -1975,6 +2715,7 @@ index 00000000..f13fa6cb
 +        char *parent = incoming + strlen(incoming);
 +        SQUASH_DIR *dirp;
 +        struct SQUASH_DIRENT *mydirent;
++				struct SQUASH_DIRENT dummy_dirent;
 +        char *current_path_tail;
 +        char *current_path;
 +        size_t mbstowcs_size;
@@ -2003,7 +2744,22 @@ index 00000000..f13fa6cb
 +        do {
 +        	mydirent = squash_readdir(dirp);
 +                if (NULL == mydirent) {
-+                        break;
++									// try to determine
++									// either this dir is empty
++									// or the dir is not empty and we run out of possible matches
++									if (dirp->actual_nr == 0) {
++										// this dir is empty
++										// so just return a "." to match the original Windows behavior
++										current_path_tail[0] = '.';
++										current_path_tail[1] = 0; // we are sure that this will make true==PathMatchSpecA(current_path, dup_incoming)
++										dummy_dirent.d_namlen = 1;
++										dummy_dirent.d_ino = dirp->node.base.inode_number;
++										dummy_dirent.d_name[0] = '.';
++										dummy_dirent.d_name[1] = 0;
++										dummy_dirent.d_type = DT_DIR;
++										mydirent = &dummy_dirent;
++									}
++									break;
 +                }
 +                memcpy(current_path_tail, mydirent->d_name, strlen(mydirent->d_name) + 1);
 +        } while (!PathMatchSpecA(current_path, dup_incoming));
@@ -2390,6 +3146,35 @@ index 00000000..f13fa6cb
 +	);
 +}
 +
++BOOL
++EncloseIOGetFileInformationByHandle(
++	HANDLE hFile,
++	LPBY_HANDLE_FILE_INFORMATION lpFileInformation
++)
++{
++	struct squash_file *sqf = squash_find_entry((void *)hFile);
++	struct stat st;
++	if (sqf) {
++		st = sqf->st;
++		lpFileInformation->dwFileAttributes = EncloseIOGetFileAttributesHelper(&st);
++		EncloseIOUnixtimeToFiletime(st.st_ctime, &lpFileInformation->ftCreationTime);
++		EncloseIOUnixtimeToFiletime(st.st_atime, &lpFileInformation->ftLastAccessTime);
++		EncloseIOUnixtimeToFiletime(st.st_mtime, &lpFileInformation->ftLastWriteTime);
++		lpFileInformation->dwVolumeSerialNumber = 0; // TODO
++		lpFileInformation->nFileSizeHigh = 0;
++		lpFileInformation->nFileSizeLow = st.st_size;
++		lpFileInformation->nNumberOfLinks = st.st_nlink;
++		lpFileInformation->nFileIndexHigh = 0;
++		lpFileInformation->nFileIndexLow = st.st_ino;
++		return 1;
++	} else {
++		return GetFileInformationByHandle(
++			hFile,
++			lpFileInformation
++		);
++	}
++}
++
 +#ifndef RUBY_EXPORT
 +NTSTATUS
 +EncloseIOpNtQueryInformationFile(
@@ -2400,7 +3185,7 @@ index 00000000..f13fa6cb
 +	FILE_INFORMATION_CLASS FileInformationClass)
 +{
 +	struct squash_file *sqf = squash_find_entry((void *)FileHandle);
-+        struct stat st;
++	struct stat st;
 +	if (sqf) {
 +		st = sqf->st;
 +		IoStatusBlock->Status = STATUS_NOT_IMPLEMENTED;
@@ -2512,474 +3297,15 @@ index 00000000..f13fa6cb
 +
 +#endif // !RUBY_EXPORT
 +#endif
-diff --git a/ruby/include/enclose_io.h b/ruby/include/enclose_io.h
+diff --git a/ruby/enclose_io_win32.h b/ruby/enclose_io_win32.h
 new file mode 100644
-index 00000000..741205de
+index 00000000..69e46754
 --- /dev/null
-+++ b/ruby/include/enclose_io.h
-@@ -0,0 +1,17 @@
++++ b/ruby/enclose_io_win32.h
+@@ -0,0 +1,74 @@
 +/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
-+ *
-+ * This file is part of libsquash, distributed under the MIT License
-+ * For full terms see the included LICENSE file
-+ */
-+
-+#ifndef RUBY_PACKER_H_999BC1DA
-+#define RUBY_PACKER_H_999BC1DA
-+
-+#include "enclose_io_prelude.h"
-+#include "enclose_io_common.h"
-+#include "enclose_io_win32.h"
-+#include "enclose_io_unix.h"
-+
-+#endif
-diff --git a/ruby/include/enclose_io_common.h b/ruby/include/enclose_io_common.h
-new file mode 100644
-index 00000000..695bfcd7
---- /dev/null
-+++ b/ruby/include/enclose_io_common.h
-@@ -0,0 +1,352 @@
-+/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
-+ *
-+ * This file is part of libsquash, distributed under the MIT License
-+ * For full terms see the included LICENSE file
-+ */
-+
-+#ifndef ENCLOSE_IO_COMMON_H_39323079
-+#define ENCLOSE_IO_COMMON_H_39323079
-+
-+#include "squash.h"
-+
-+#ifndef __USE_XOPEN_EXTENDED
-+#define __USE_XOPEN_EXTENDED
-+#endif
-+
-+#include <stdlib.h>
-+#include <stdint.h>
-+#include <stddef.h>
-+#include <string.h>
-+#include <sys/stat.h>
-+#include <sys/types.h>
-+#include <fcntl.h>
-+#include <stdarg.h>
-+#include <assert.h>
-+
-+#ifdef _WIN32
-+#include <direct.h>
-+#include <Shlwapi.h>
-+#else
-+#include <sys/param.h>
-+#include <sys/uio.h>
-+#include <unistd.h>
-+#include <ftw.h>
-+#include <dirent.h>
-+#include <dlfcn.h>
-+#endif
-+
-+extern sqfs *enclose_io_fs;
-+extern sqfs_path enclose_io_cwd;
-+extern const uint8_t enclose_io_memfs[];
-+
-+#define ENCLOSE_IO_PP_NARG(...) \
-+    ENCLOSE_IO_PP_NARG_(__VA_ARGS__,ENCLOSE_IO_PP_RSEQ_N())
-+#define ENCLOSE_IO_PP_NARG_(...) \
-+    ENCLOSE_IO_PP_ARG_N(__VA_ARGS__)
-+#define ENCLOSE_IO_PP_ARG_N( \
-+     _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
-+    _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
-+    _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
-+    _31,_32,_33,_34,_35,_36,_37,_38,_39,_40, \
-+    _41,_42,_43,_44,_45,_46,_47,_48,_49,_50, \
-+    _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
-+    _61,_62,_63,  N, ...) N
-+#define ENCLOSE_IO_PP_RSEQ_N() \
-+    63,62,61,60,                   \
-+    59,58,57,56,55,54,53,52,51,50, \
-+    49,48,47,46,45,44,43,42,41,40, \
-+    39,38,37,36,35,34,33,32,31,30, \
-+    29,28,27,26,25,24,23,22,21,20, \
-+    19,18,17,16,15,14,13,12,11,10, \
-+     9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-+
-+short enclose_io_is_path(char *pathname);
-+short enclose_io_is_path_w(wchar_t *pathname);
-+short enclose_io_is_relative_w(wchar_t *pathname);
-+
-+#define ENCLOSE_IO_CONSIDER_MKDIR_WORKDIR_RETURN(PATH, RETURN1, RETURN2) \
-+	if (mkdir_workdir) { \
-+		sqfs_path mkdir_workdir_expanded; \
-+		char *mkdir_workdir_expanded_head; \
-+		size_t mkdir_workdir_len; \
-+		size_t memcpy_len; \
-+		struct stat mkdir_workdir_buf; \
-+		mkdir_workdir_len = strlen(mkdir_workdir); \
-+		memcpy(mkdir_workdir_expanded, mkdir_workdir, mkdir_workdir_len); \
-+		memcpy_len = strlen(PATH); \
-+		if (SQUASHFS_PATH_LEN - mkdir_workdir_len < memcpy_len) { \
-+			memcpy_len = SQUASHFS_PATH_LEN - mkdir_workdir_len; \
-+		} \
-+		memcpy(&mkdir_workdir_expanded[mkdir_workdir_len], (PATH), memcpy_len); \
-+		mkdir_workdir_expanded[mkdir_workdir_len + memcpy_len] = '\0'; \
-+		mkdir_workdir_expanded_head = strstr(mkdir_workdir_expanded, enclose_io_mkdir_scope); \
-+		if (mkdir_workdir_expanded_head && '/' == mkdir_workdir_expanded_head[strlen(enclose_io_mkdir_scope)]) { \
-+			memmove(mkdir_workdir_expanded_head, mkdir_workdir_expanded_head + strlen(enclose_io_mkdir_scope), strlen(mkdir_workdir_expanded_head + strlen(enclose_io_mkdir_scope)) + 1); \
-+			if (0 == stat(mkdir_workdir_expanded, &mkdir_workdir_buf)) { \
-+				return(RETURN2); \
-+			} \
-+		} \
-+	} \
-+	return(RETURN1)
-+
-+#define ENCLOSE_IO_GEN_EXPANDED_NAME(path)	\
-+			enclose_io_cwd_len = strlen(enclose_io_cwd); \
-+			memcpy(enclose_io_expanded, enclose_io_cwd, enclose_io_cwd_len); \
-+			memcpy_len = strlen(path); \
-+			if (SQUASHFS_PATH_LEN - enclose_io_cwd_len < memcpy_len) { memcpy_len = SQUASHFS_PATH_LEN - enclose_io_cwd_len; } \
-+			memcpy(&enclose_io_expanded[enclose_io_cwd_len], (path), memcpy_len); \
-+			enclose_io_expanded[enclose_io_cwd_len + memcpy_len] = '\0'
-+
-+//TODO maybe use WideCharToMultiByte
-+#define W_ENCLOSE_IO_PATH_CONVERT(path) \
-+			enclose_io_converted = (char *)enclose_io_converted_storage; \
-+			enclose_io_converted_length = wcstombs(enclose_io_converted_storage, (path), SQUASHFS_PATH_LEN); \
-+			if ((size_t)-1 == enclose_io_converted_length) { enclose_io_converted_length = 0; } \
-+			enclose_io_converted[enclose_io_converted_length] = '\0'; \
-+			if (strnlen(enclose_io_converted_storage, 4) >= 4 && (0 == strncmp(enclose_io_converted_storage, "\\\\?\\", 4) || 0 == strncmp(enclose_io_converted_storage, "//?/", 4))) { \
-+				if (strnlen(enclose_io_converted_storage, 6) >= 6 && ':' == enclose_io_converted_storage[5]) { \
-+					enclose_io_converted += 6; \
-+				} else { \
-+					enclose_io_converted += 4; \
-+				} \
-+			} else if (strnlen(enclose_io_converted_storage, 3) >= 3 && (0 == strncmp(enclose_io_converted_storage + 1, ":\\", 2) || 0 == strncmp(enclose_io_converted_storage + 1, ":/", 2))) { \
-+				enclose_io_converted += 2; \
-+			} \
-+			for (enclose_io_i = enclose_io_converted; *enclose_io_i; enclose_io_i++) { \
-+				if ('\\' == *enclose_io_i) { *enclose_io_i = '/'; } \
-+			}
-+
-+#define ENCLOSE_IO_SET_LAST_ERROR do { \
-+			if (ENOMEM == errno) { \
-+				SetLastError(ERROR_NOT_ENOUGH_MEMORY); \
-+                                _doserrno = ERROR_NOT_ENOUGH_MEMORY; \
-+			} else if (ENOENT == errno) { \
-+				SetLastError(ERROR_FILE_NOT_FOUND); \
-+                                _doserrno = ERROR_FILE_NOT_FOUND; \
-+			} else if (EBADF == errno) { \
-+				SetLastError(ERROR_INVALID_HANDLE); \
-+                                _doserrno = ERROR_INVALID_HANDLE; \
-+			} else if (ENAMETOOLONG == errno) { \
-+				SetLastError(ERROR_BUFFER_OVERFLOW); \
-+                                _doserrno = ERROR_BUFFER_OVERFLOW; \
-+			} else { \
-+				SetLastError(ERROR_INVALID_FUNCTION); \
-+                                _doserrno = ERROR_INVALID_FUNCTION; \
-+			} \
-+		} while (0)
-+
-+int enclose_io_dos_return(int statement);
-+short enclose_io_if(const char* path);
-+SQUASH_OS_PATH enclose_io_ifextract(const char* path, const char* ext_name);
-+void enclose_io_chdir_helper(const char *path);
-+int enclose_io_chdir(const char *path);
-+char *enclose_io_getcwd(char *buf, size_t size);
-+char *enclose_io_getwd(char *buf);
-+int enclose_io_stat(const char *path, struct stat *buf);
-+int enclose_io_fstat(int fildes, struct stat *buf);
-+int enclose_io_open(int nargs, const char *pathname, int flags, ...);
-+int enclose_io_openat(int fd, int nargs, const char *pathname, int flags, ...);
-+int enclose_io_close(int fildes);
-+ssize_t enclose_io_read(int fildes, void *buf, size_t nbyte);
-+off_t enclose_io_lseek(int fildes, off_t offset, int whence);
-+
-+#ifdef _WIN32
-+
-+#include "enclose_io_winapi.h"
-+
-+int enclose_io__open(const char *pathname, int flags);
-+int enclose_io__wopen(const wchar_t *pathname, int flags, int mode);
-+int enclose_io__wmkdir(wchar_t* pathname);
-+int enclose_io_open_osfhandle(intptr_t osfhandle, int flags);
-+intptr_t enclose_io_get_osfhandle(int fd);
-+int enclose_io_wchdir(const wchar_t *path);
-+wchar_t *enclose_io_wgetcwd(wchar_t *buf, size_t size);
-+int enclose_io_fstati64(int fildes, struct _stati64 *buf);
-+__int64 enclose_io_lseeki64(int fildes, __int64 offset, int whence);
-+
-+HANDLE
-+EncloseIOCreateFileW(
-+	LPCWSTR lpFileName,
-+	DWORD dwDesiredAccess,
-+	DWORD dwShareMode,
-+	LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-+	DWORD dwCreationDisposition,
-+	DWORD dwFlagsAndAttributes,
-+	HANDLE hTemplateFile
-+);
-+
-+NTSTATUS
-+EncloseIOpNtQueryDirectoryFile(
-+	HANDLE FileHandle,
-+	HANDLE Event,
-+	PIO_APC_ROUTINE ApcRoutine,
-+	PVOID ApcContext,
-+	PIO_STATUS_BLOCK IoStatusBlock,
-+	PVOID FileInformation,
-+	ULONG Length,
-+	FILE_INFORMATION_CLASS FileInformationClass,
-+	BOOLEAN ReturnSingleEntry,
-+	PUNICODE_STRING FileName,
-+	BOOLEAN RestartScan
-+);
-+
-+BOOL
-+EncloseIOCloseHandle(
-+	HANDLE hObject
-+);
-+
-+DWORD
-+EncloseIOGetFileAttributesW(
-+    LPCWSTR lpFileName
-+);
-+
-+BOOL
-+EncloseIOGetFileAttributesExW(
-+    LPCWSTR lpFileName,
-+    GET_FILEEX_INFO_LEVELS fInfoLevelId,
-+    LPVOID lpFileInformation
-+);
-+
-+NTSTATUS
-+EncloseIOpNtQueryInformationFile(
-+	HANDLE FileHandle,
-+	PIO_STATUS_BLOCK IoStatusBlock,
-+	PVOID FileInformation,
-+	ULONG Length,
-+	FILE_INFORMATION_CLASS FileInformationClass);
-+
-+NTSTATUS
-+EncloseIOpNtQueryVolumeInformationFile(
-+	HANDLE FileHandle,
-+	PIO_STATUS_BLOCK IoStatusBlock,
-+	PVOID FsInformation,
-+	ULONG Length,
-+	FS_INFORMATION_CLASS FsInformationClass);
-+
-+BOOL
-+EncloseIOReadFile(
-+	HANDLE       hFile,
-+	LPVOID       lpBuffer,
-+	DWORD        nNumberOfBytesToRead,
-+	LPDWORD      lpNumberOfBytesRead,
-+	LPOVERLAPPED lpOverlapped
-+);
-+
-+BOOL
-+EncloseIOGetHandleInformation(
-+    HANDLE hObject,
-+    LPDWORD lpdwFlags
-+);
-+
-+DWORD
-+EncloseIOGetFileType(
-+        HANDLE hFile
-+);
-+
-+HANDLE
-+EncloseIOFindFirstFileW(
-+        LPCWSTR lpFileName,
-+        LPWIN32_FIND_DATAW lpFindFileData
-+);
-+
-+BOOL
-+EncloseIOFindNextFileW(
-+        HANDLE hFindFile,
-+        LPWIN32_FIND_DATAW lpFindFileData
-+);
-+
-+BOOL
-+EncloseIOFindClose(
-+        HANDLE hFindFile
-+);
-+
-+BOOL
-+EncloseIODeviceIoControl(
-+        HANDLE hDevice,
-+        DWORD dwIoControlCode,
-+        LPVOID lpInBuffer,
-+        DWORD nInBufferSize,
-+        LPVOID lpOutBuffer,
-+        DWORD nOutBufferSize,
-+        LPDWORD lpBytesReturned,
-+        LPOVERLAPPED lpOverlapped
-+);
-+
-+HANDLE
-+EncloseIOCreateIoCompletionPort(
-+        HANDLE FileHandle,
-+        HANDLE ExistingCompletionPort,
-+        ULONG_PTR CompletionKey,
-+        DWORD NumberOfConcurrentThreads
-+);
-+
-+BOOL
-+EncloseIOReadDirectoryChangesW(
-+        HANDLE hDirectory,
-+        LPVOID lpBuffer,
-+        DWORD nBufferLength,
-+        BOOL bWatchSubtree,
-+        DWORD dwNotifyFilter,
-+        LPDWORD lpBytesReturned,
-+        LPOVERLAPPED lpOverlapped,
-+        LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-+);
-+
-+HMODULE
-+EncloseIOLoadLibraryExW(
-+	LPCWSTR lpLibFileName,
-+	HANDLE hFile,
-+	DWORD dwFlags
-+);
-+
-+BOOL
-+EncloseIOCreateProcessW(
-+	LPCWSTR lpApplicationName,
-+	LPWSTR lpCommandLine,
-+	LPSECURITY_ATTRIBUTES lpProcessAttributes,
-+	LPSECURITY_ATTRIBUTES lpThreadAttributes,
-+	BOOL bInheritHandles,
-+	DWORD dwCreationFlags,
-+	LPVOID lpEnvironment,
-+	LPCWSTR lpCurrentDirectory,
-+	LPSTARTUPINFOW lpStartupInfo,
-+	LPPROCESS_INFORMATION lpProcessInformation
-+);
-+	
-+BOOL
-+EncloseIOSetCurrentDirectoryW(
-+	LPCWSTR lpPathName
-+);
-+
-+
-+DWORD
-+EncloseIOGetCurrentDirectoryW(
-+	DWORD nBufferLength,
-+	LPWSTR lpBuffer
-+);
-+
-+#else
-+int enclose_io_lstat(const char *path, struct stat *buf);
-+ssize_t enclose_io_readlink(const char *path, char *buf, size_t bufsize);
-+DIR * enclose_io_opendir(const char *filename);
-+DIR * enclose_io_fdopendir(int fd);
-+int enclose_io_closedir(DIR *dirp);
-+struct SQUASH_DIRENT * enclose_io_readdir(DIR *dirp);
-+long enclose_io_telldir(DIR *dirp);
-+void enclose_io_seekdir(DIR *dirp, long loc);
-+void enclose_io_rewinddir(DIR *dirp);
-+int enclose_io_dirfd(DIR *dirp);
-+int enclose_io_scandir(const char *dirname, struct SQUASH_DIRENT ***namelist,
-+	int(*select)(const struct SQUASH_DIRENT *),
-+	int(*compar)(const struct SQUASH_DIRENT **, const struct SQUASH_DIRENT **));
-+ssize_t enclose_io_pread(int d, void *buf, size_t nbyte, off_t offset);
-+ssize_t enclose_io_readv(int d, const struct iovec *iov, int iovcnt);
-+void* enclose_io_dlopen(const char* path, int mode);
-+int enclose_io_access(const char *path, int mode);
-+int enclose_io_mkdir(const char *path, mode_t mode);
-+
-+#endif // !_WIN32
-+
-+#endif
-diff --git a/ruby/include/enclose_io_prelude.h b/ruby/include/enclose_io_prelude.h
-new file mode 100644
-index 00000000..133d44f1
---- /dev/null
-+++ b/ruby/include/enclose_io_prelude.h
-@@ -0,0 +1,19 @@
-+/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
-+ *
-+ * This file is part of libsquash, distributed under the MIT License
-+ * For full terms see the included LICENSE file
-+ */
-+
-+#ifndef ENCLOSE_IO_PRELUDE_H_E46A560C
-+#define ENCLOSE_IO_PRELUDE_H_E46A560C
-+
-+#ifdef _WIN32
-+#define WINDOWS_H_A80B5674
-+typedef unsigned short sqfs_mode_t;
-+typedef uint32_t sqfs_id_t;
-+typedef DWORD64 sqfs_off_t;
-+#endif // _WIN32
-+
-+#endif /* end of include guard: ENCLOSE_IO_PRELUDE_H_E46A560C */
-diff --git a/ruby/include/enclose_io_unix.h b/ruby/include/enclose_io_unix.h
-new file mode 100644
-index 00000000..1a916a8f
---- /dev/null
-+++ b/ruby/include/enclose_io_unix.h
-@@ -0,0 +1,47 @@
-+/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
-+ *
-+ * This file is part of libsquash, distributed under the MIT License
-+ * For full terms see the included LICENSE file
-+ */
-+
-+#ifndef ENCLOSE_IO_UNIX_H_E0229A03
-+#define ENCLOSE_IO_UNIX_H_E0229A03
-+#ifndef __cplusplus
-+#ifndef _WIN32
-+
-+	#ifdef dirfd
-+		#undef dirfd
-+	#endif
-+
-+	#define getcwd(...)	enclose_io_getcwd(__VA_ARGS__)
-+	#define getwd(...)	enclose_io_getwd(__VA_ARGS__)
-+	#define chdir(...)	enclose_io_chdir(__VA_ARGS__)
-+	#define stat(...)	enclose_io_stat(__VA_ARGS__)
-+	#define fstat(...)	enclose_io_fstat(__VA_ARGS__)
-+	#define lstat(...)	enclose_io_lstat(__VA_ARGS__)
-+	#define open(...)	enclose_io_open(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
-+	#define openat(...)	enclose_io_openat(ENCLOSE_IO_PP_NARG(__VA_ARGS__), __VA_ARGS__)
-+	#define close(...)	enclose_io_close(__VA_ARGS__)
-+	#define read(...)	enclose_io_read(__VA_ARGS__)
-+	#define lseek(...)	enclose_io_lseek(__VA_ARGS__)
-+	#define readlink(...)	enclose_io_readlink(__VA_ARGS__)
-+	#define opendir(...)	enclose_io_opendir(__VA_ARGS__)
-+	#define fdopendir(...)	enclose_io_fdopendir(__VA_ARGS__)
-+	#define closedir(...)	enclose_io_closedir(__VA_ARGS__)
-+	#define readdir(...)	enclose_io_readdir(__VA_ARGS__)
-+	#define telldir(...)	enclose_io_telldir(__VA_ARGS__)
-+	#define seekdir(...)	enclose_io_seekdir(__VA_ARGS__)
-+	#define rewinddir(...)	enclose_io_rewinddir(__VA_ARGS__)
-+	#define dirfd(...)	enclose_io_dirfd(__VA_ARGS__)
-+	#define scandir(...)	enclose_io_scandir(__VA_ARGS__)
-+	#define pread(...)	enclose_io_pread(__VA_ARGS__)
-+	#define readv(...)	enclose_io_readv(__VA_ARGS__)
-+	#define dlopen(...)	enclose_io_dlopen(__VA_ARGS__)
-+	#define access(...)	enclose_io_access(__VA_ARGS__)
-+	#define mkdir(...)	enclose_io_mkdir(__VA_ARGS__)
-+
-+#endif // !_WIN32
-+#endif //!__cplusplus
-+#endif
-diff --git a/ruby/include/enclose_io_win32.h b/ruby/include/enclose_io_win32.h
-new file mode 100644
-index 00000000..05b89b08
---- /dev/null
-+++ b/ruby/include/enclose_io_win32.h
-@@ -0,0 +1,72 @@
-+/*
-+ * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
-+ *                    Shengyuan Liu <sounder.liu@gmail.com>
++ * Copyright (c) 2017 - 2020 Minqi Pan <pmq2001@gmail.com>
++ *                           Shengyuan Liu <sounder.liu@gmail.com>
 + *
 + * This file is part of libsquash, distributed under the MIT License
 + * For full terms see the included LICENSE file
@@ -3045,15 +3371,17 @@ index 00000000..05b89b08
 +#define CreateProcessW(...) EncloseIOCreateProcessW(__VA_ARGS__)
 +#define SetCurrentDirectoryW(...) EncloseIOSetCurrentDirectoryW(__VA_ARGS__)
 +#define GetCurrentDirectoryW(...) EncloseIOGetCurrentDirectoryW(__VA_ARGS__)
++#define GetFullPathNameW(...) EncloseIOGetFullPathNameW(__VA_ARGS__)
++#define GetFileInformationByHandle(...) EncloseIOGetFileInformationByHandle(__VA_ARGS__)
 +
 +#endif //_WIN32
 +#endif //!__cplusplus
 +#endif
-diff --git a/ruby/include/enclose_io_winapi.h b/ruby/include/enclose_io_winapi.h
+diff --git a/ruby/enclose_io_winapi.h b/ruby/enclose_io_winapi.h
 new file mode 100644
 index 00000000..c27000d4
 --- /dev/null
-+++ b/ruby/include/enclose_io_winapi.h
++++ b/ruby/enclose_io_winapi.h
 @@ -0,0 +1,246 @@
 +/*
 +* Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>

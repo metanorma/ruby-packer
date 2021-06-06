@@ -1,4 +1,4 @@
-RUBY_VERSION = 2.5.1
+RUBY_VERSION = 2.7.1
 GDBM_VERSION = 1.13
 LIBFFI_VERSION = 3.2.1
 NCURSES_VERSION = 6.2
@@ -75,7 +75,7 @@ vendor/zlib: .archives/zlib-$(ZLIB_VERSION).tar.gz
 	mkdir -p .archives && cd .archives && curl -O $(ZLIB_URL)
 
 clean-all: clean clean-archives
-clean: clean-ruby clean-vendor clean-binary
+clean: clean-ruby clean-vendor clean-binary clean-binary
 
 clean-archives:
 	rm -rvf .archives
@@ -91,3 +91,6 @@ clean-vendor-%:
 
 clean-binary:
 	rm -vf rubyc-linux-x64
+
+clean-build:
+	rm -rvf .rubyc-build.*

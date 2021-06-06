@@ -1,4 +1,4 @@
-From 3fe8d065ec161676d0f942b310063bc5ab05062c Mon Sep 17 00:00:00 2001
+From 3f2bb8b84e03467215a4d7b4848aaaa3246ae8ac Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:50:34 +0300
 Subject: [PATCH 4/8] ssl certs
@@ -130,10 +130,10 @@ index 00000000..8afb2190
 +WD9f
 +-----END CERTIFICATE-----
 diff --git a/ruby/test/rubygems/test_bundled_ca.rb b/ruby/test/rubygems/test_bundled_ca.rb
-index 97a64af3..91d78b7f 100644
+index ad66f3e6..42247555 100644
 --- a/ruby/test/rubygems/test_bundled_ca.rb
 +++ b/ruby/test/rubygems/test_bundled_ca.rb
-@@ -51,12 +51,16 @@ def test_accessing_rubygems
+@@ -51,12 +51,16 @@ if ENV["CI"] || ENV["TEST_SSL"]
        assert_https('rubygems.org')
      end
  
