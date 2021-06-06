@@ -1,17 +1,17 @@
-From 1f5c1146e22ec6c58be54506fa08031da682f4af Mon Sep 17 00:00:00 2001
+From dac8accd507cea475d158f0d7f479c0a4a3d33c3 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:59:02 +0300
 Subject: [PATCH 7/8] main function
 
 ---
- ruby/main.c | 89 +++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 89 insertions(+)
+ ruby/main.c | 108 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 108 insertions(+)
 
 diff --git a/ruby/main.c b/ruby/main.c
-index 4b2675bc..66f5de42 100644
+index 313aaedd..eade0b1c 100644
 --- a/ruby/main.c
 +++ b/ruby/main.c
-@@ -25,9 +25,98 @@
+@@ -33,9 +33,117 @@
  #include <stdlib.h>
  #endif
  
@@ -19,9 +19,11 @@ index 4b2675bc..66f5de42 100644
 +#include "enclose_io.h"
 +#ifdef _WIN32
 +#include <direct.h>
-+#else
++#include <windows.h>
++#else // ifdef _WIN32
 +#include <unistd.h>
-+#endif
++extern uint8_t _binary_enclose_io_memfs_squashfs_start[];
++#endif // ifdef _WIN32
 +extern SQUASH_OS_PATH mkdir_workdir;
 +extern char *enclose_io_mkdir_scope;
 +// --------- [Enclose.io Hack end] ---------
@@ -29,19 +31,29 @@ index 4b2675bc..66f5de42 100644
  int
  main(int argc, char **argv)
  {
-+// --------- [Enclose.io Hack start] ---------
++// --------- [Enclose.IO Hack start] ---------
++	const uint8_t *enclose_io_memfs = NULL;
 +	int ret;
 +	sqfs_err enclose_io_ret;
 +#ifdef _WIN32
 +	BOOL bool_ret;
-+#else
++	HRSRC myResource;
++	HGLOBAL myResourceData;
++#else // ifdef _WIN32
 +	int new_argc;
 +	char **new_argv;
 +	char *argv_memory;
 +	size_t i;
 +	size_t total_argv_size;
-+#endif
++#endif // ifdef _WIN32
 +
++#ifdef _WIN32
++	myResource = FindResource(NULL, MAKEINTRESOURCE(101), RT_RCDATA);
++	assert(NULL != myResource);
++	myResourceData = LoadResource(NULL, myResource);
++	assert(NULL != myResourceData);
++	enclose_io_memfs = (const uint8_t *)(LockResource(myResourceData));
++	assert(NULL != enclose_io_memfs);
 +	enclose_io_ret = squash_start();
 +	assert(SQFS_OK == enclose_io_ret);
 +	enclose_io_fs = malloc(sizeof(sqfs));
@@ -49,13 +61,11 @@ index 4b2675bc..66f5de42 100644
 +	memset(enclose_io_fs, 0, sizeof(sqfs));
 +	enclose_io_ret = sqfs_open_image(enclose_io_fs, enclose_io_memfs, 0);
 +	assert(SQFS_OK == enclose_io_ret);
-+
-+#ifdef _WIN32
 +	if (NULL == getenv("RUBY_PACKER_USE_ORIGINAL_RUBY")) {
-+#ifdef RUBY_PACKER_ENV_BUNDLE_GEMFILE
-+		bool_ret = SetEnvironmentVariable("BUNDLE_GEMFILE", RUBY_PACKER_ENV_BUNDLE_GEMFILE);
++#ifdef RUBY_PACKER_GEMFILE
++		bool_ret = SetEnvironmentVariable("BUNDLE_GEMFILE", "/__enclose_io_memfs__/local/Gemfile");
 +		assert(0 != bool_ret);
-+#endif // RUBY_PACKER_ENV_BUNDLE_GEMFILE
++#endif // ifdef RUBY_PACKER_GEMFILE
 +#ifdef RUBY_PACKER_RAILS
 +		assert(NULL == mkdir_workdir);
 +		enclose_io_mkdir_scope = "/__enclose_io_memfs__/local";
@@ -63,16 +73,25 @@ index 4b2675bc..66f5de42 100644
 +		assert(0 != bool_ret);
 +#endif // RUBY_PACKER_RAILS
 +	}
-+#else // ifdef _WIN32 -----------------------------------------------
++#else // ifdef _WIN32
++	enclose_io_memfs = (const uint8_t *)(_binary_enclose_io_memfs_squashfs_start);
++	assert(NULL != enclose_io_memfs);
++	enclose_io_ret = squash_start();
++	assert(SQFS_OK == enclose_io_ret);
++	enclose_io_fs = malloc(sizeof(sqfs));
++	assert(NULL != enclose_io_fs);
++	memset(enclose_io_fs, 0, sizeof(sqfs));
++	enclose_io_ret = sqfs_open_image(enclose_io_fs, enclose_io_memfs, 0);
++	assert(SQFS_OK == enclose_io_ret);
 +#ifdef RUBY_PACKER_ENTRANCE
 +	new_argc = argc;
 +	new_argv = argv;
 +	argv_memory = NULL;
 +	if (NULL == getenv("RUBY_PACKER_USE_ORIGINAL_RUBY")) {
-+#ifdef RUBY_PACKER_ENV_BUNDLE_GEMFILE
-+		ret = setenv("BUNDLE_GEMFILE", RUBY_PACKER_ENV_BUNDLE_GEMFILE, 1);
++#ifdef RUBY_PACKER_GEMFILE
++		ret = setenv("BUNDLE_GEMFILE", "/__enclose_io_memfs__/local/Gemfile", 1);
 +		assert(0 == ret);
-+#endif // RUBY_PACKER_ENV_BUNDLE_GEMFILE
++#endif // ifdef RUBY_PACKER_GEMFILE
 +#ifdef RUBY_PACKER_RAILS
 +		assert(NULL == mkdir_workdir);
 +		enclose_io_mkdir_scope = "/__enclose_io_memfs__/local";

@@ -1,69 +1,69 @@
-From be4b2f3c62f762aec82e481a82d9bac5b930a1d8 Mon Sep 17 00:00:00 2001
+From 2b146db3fe836f3dfbcca56bd170c202451a7ea0 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:44:59 +0300
 Subject: [PATCH 1/8] squashfs source
 
 ---
- ruby/common.mk                    |  22 +-
- ruby/include/squash.h             | 244 +++++++++++++++
- ruby/include/squash/cache.h       |  68 +++++
- ruby/include/squash/common.h      |  80 +++++
- ruby/include/squash/decompress.h  |  42 +++
- ruby/include/squash/dir.h         |  94 ++++++
- ruby/include/squash/dirent.h      |  36 +++
- ruby/include/squash/fdtable.h     |  32 ++
- ruby/include/squash/file.h        |  78 +++++
- ruby/include/squash/fs.h          | 132 ++++++++
- ruby/include/squash/hash.h        |  63 ++++
- ruby/include/squash/mutex.h       |  32 ++
- ruby/include/squash/nonstd.h      |  34 +++
- ruby/include/squash/private.h     |  35 +++
- ruby/include/squash/squashfs_fs.h | 318 +++++++++++++++++++
- ruby/include/squash/stack.h       |  54 ++++
- ruby/include/squash/table.h       |  41 +++
- ruby/include/squash/traverse.h    |  69 +++++
- ruby/include/squash/util.h        |  41 +++
- ruby/include/squash/windows.h     | 107 +++++++
- ruby/squash_cache.c               |  99 ++++++
- ruby/squash_decompress.c          |  44 +++
- ruby/squash_dir.c                 | 487 ++++++++++++++++++++++++++++++
- ruby/squash_dirent.c              | 215 +++++++++++++
- ruby/squash_extract.c             | 265 ++++++++++++++++
- ruby/squash_fd.c                  | 241 +++++++++++++++
- ruby/squash_file.c                | 329 ++++++++++++++++++++
- ruby/squash_fs.c                  | 434 ++++++++++++++++++++++++++
- ruby/squash_hash.c                | 131 ++++++++
- ruby/squash_mutex.c               |  49 +++
- ruby/squash_nonstd-makedev.c      |  35 +++
- ruby/squash_nonstd-stat.c         |  58 ++++
- ruby/squash_private.c             |  47 +++
- ruby/squash_readlink.c            |  85 ++++++
- ruby/squash_scandir.c             |  66 ++++
- ruby/squash_stack.c               | 130 ++++++++
- ruby/squash_stat.c                |  82 +++++
- ruby/squash_table.c               |  66 ++++
- ruby/squash_traverse.c            | 322 ++++++++++++++++++++
- ruby/squash_util.c                |  84 ++++++
+ ruby/common.mk               |  22 +-
+ ruby/squash.h                | 244 ++++++++++++++++++
+ ruby/squash/cache.h          |  68 +++++
+ ruby/squash/common.h         |  80 ++++++
+ ruby/squash/decompress.h     |  42 +++
+ ruby/squash/dir.h            |  94 +++++++
+ ruby/squash/dirent.h         |  36 +++
+ ruby/squash/fdtable.h        |  32 +++
+ ruby/squash/file.h           |  78 ++++++
+ ruby/squash/fs.h             | 132 ++++++++++
+ ruby/squash/hash.h           |  63 +++++
+ ruby/squash/mutex.h          |  32 +++
+ ruby/squash/nonstd.h         |  34 +++
+ ruby/squash/private.h        |  35 +++
+ ruby/squash/squashfs_fs.h    | 318 +++++++++++++++++++++++
+ ruby/squash/stack.h          |  54 ++++
+ ruby/squash/table.h          |  41 +++
+ ruby/squash/traverse.h       |  69 +++++
+ ruby/squash/util.h           |  41 +++
+ ruby/squash/windows.h        | 107 ++++++++
+ ruby/squash_cache.c          |  99 +++++++
+ ruby/squash_decompress.c     |  44 ++++
+ ruby/squash_dir.c            | 487 +++++++++++++++++++++++++++++++++++
+ ruby/squash_dirent.c         | 215 ++++++++++++++++
+ ruby/squash_extract.c        | 265 +++++++++++++++++++
+ ruby/squash_fd.c             | 241 +++++++++++++++++
+ ruby/squash_file.c           | 329 +++++++++++++++++++++++
+ ruby/squash_fs.c             | 434 +++++++++++++++++++++++++++++++
+ ruby/squash_hash.c           | 131 ++++++++++
+ ruby/squash_mutex.c          |  49 ++++
+ ruby/squash_nonstd-makedev.c |  35 +++
+ ruby/squash_nonstd-stat.c    |  58 +++++
+ ruby/squash_private.c        |  47 ++++
+ ruby/squash_readlink.c       |  85 ++++++
+ ruby/squash_scandir.c        |  66 +++++
+ ruby/squash_stack.c          | 130 ++++++++++
+ ruby/squash_stat.c           |  82 ++++++
+ ruby/squash_table.c          |  66 +++++
+ ruby/squash_traverse.c       | 322 +++++++++++++++++++++++
+ ruby/squash_util.c           |  84 ++++++
  40 files changed, 4890 insertions(+), 1 deletion(-)
- create mode 100644 ruby/include/squash.h
- create mode 100644 ruby/include/squash/cache.h
- create mode 100644 ruby/include/squash/common.h
- create mode 100644 ruby/include/squash/decompress.h
- create mode 100644 ruby/include/squash/dir.h
- create mode 100644 ruby/include/squash/dirent.h
- create mode 100644 ruby/include/squash/fdtable.h
- create mode 100644 ruby/include/squash/file.h
- create mode 100644 ruby/include/squash/fs.h
- create mode 100644 ruby/include/squash/hash.h
- create mode 100644 ruby/include/squash/mutex.h
- create mode 100644 ruby/include/squash/nonstd.h
- create mode 100644 ruby/include/squash/private.h
- create mode 100644 ruby/include/squash/squashfs_fs.h
- create mode 100644 ruby/include/squash/stack.h
- create mode 100644 ruby/include/squash/table.h
- create mode 100644 ruby/include/squash/traverse.h
- create mode 100644 ruby/include/squash/util.h
- create mode 100644 ruby/include/squash/windows.h
+ create mode 100644 ruby/squash.h
+ create mode 100644 ruby/squash/cache.h
+ create mode 100644 ruby/squash/common.h
+ create mode 100644 ruby/squash/decompress.h
+ create mode 100644 ruby/squash/dir.h
+ create mode 100644 ruby/squash/dirent.h
+ create mode 100644 ruby/squash/fdtable.h
+ create mode 100644 ruby/squash/file.h
+ create mode 100644 ruby/squash/fs.h
+ create mode 100644 ruby/squash/hash.h
+ create mode 100644 ruby/squash/mutex.h
+ create mode 100644 ruby/squash/nonstd.h
+ create mode 100644 ruby/squash/private.h
+ create mode 100644 ruby/squash/squashfs_fs.h
+ create mode 100644 ruby/squash/stack.h
+ create mode 100644 ruby/squash/table.h
+ create mode 100644 ruby/squash/traverse.h
+ create mode 100644 ruby/squash/util.h
+ create mode 100644 ruby/squash/windows.h
  create mode 100644 ruby/squash_cache.c
  create mode 100644 ruby/squash_decompress.c
  create mode 100644 ruby/squash_dir.c
@@ -86,10 +86,10 @@ Subject: [PATCH 1/8] squashfs source
  create mode 100644 ruby/squash_util.c
 
 diff --git a/ruby/common.mk b/ruby/common.mk
-index 4bcd0037..0608fa72 100644
+index fd14ab66..d1e6e0a7 100644
 --- a/ruby/common.mk
 +++ b/ruby/common.mk
-@@ -74,7 +74,27 @@ ENC_MK        = enc.mk
+@@ -81,7 +81,27 @@ ENC_MK        = enc.mk
  MAKE_ENC      = -f $(ENC_MK) V="$(V)" UNICODE_HDR_DIR="$(UNICODE_HDR_DIR)" \
  		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(mflags)
  
@@ -118,11 +118,11 @@ index 4bcd0037..0608fa72 100644
  		ast.$(OBJEXT) \
  		bignum.$(OBJEXT) \
  		class.$(OBJEXT) \
-diff --git a/ruby/include/squash.h b/ruby/include/squash.h
+diff --git a/ruby/squash.h b/ruby/squash.h
 new file mode 100644
 index 00000000..fceea2e0
 --- /dev/null
-+++ b/ruby/include/squash.h
++++ b/ruby/squash.h
 @@ -0,0 +1,244 @@
 +/*
 + * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -368,11 +368,11 @@ index 00000000..fceea2e0
 +void squash_extract_clear_cache();
 +
 +#endif
-diff --git a/ruby/include/squash/cache.h b/ruby/include/squash/cache.h
+diff --git a/ruby/squash/cache.h b/ruby/squash/cache.h
 new file mode 100644
 index 00000000..e60a5924
 --- /dev/null
-+++ b/ruby/include/squash/cache.h
++++ b/ruby/squash/cache.h
 @@ -0,0 +1,68 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -442,11 +442,11 @@ index 00000000..e60a5924
 +sqfs_err sqfs_block_cache_init(sqfs_cache *cache, size_t count);
 +
 +#endif
-diff --git a/ruby/include/squash/common.h b/ruby/include/squash/common.h
+diff --git a/ruby/squash/common.h b/ruby/squash/common.h
 new file mode 100644
 index 00000000..91154e81
 --- /dev/null
-+++ b/ruby/include/squash/common.h
++++ b/ruby/squash/common.h
 @@ -0,0 +1,80 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -528,11 +528,11 @@ index 00000000..91154e81
 +} sqfs_md_cursor;
 +
 +#endif
-diff --git a/ruby/include/squash/decompress.h b/ruby/include/squash/decompress.h
+diff --git a/ruby/squash/decompress.h b/ruby/squash/decompress.h
 new file mode 100644
 index 00000000..1d951bca
 --- /dev/null
-+++ b/ruby/include/squash/decompress.h
++++ b/ruby/squash/decompress.h
 @@ -0,0 +1,42 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -576,11 +576,11 @@ index 00000000..1d951bca
 +sqfs_decompressor sqfs_decompressor_get(sqfs_compression_type type);
 +
 +#endif
-diff --git a/ruby/include/squash/dir.h b/ruby/include/squash/dir.h
+diff --git a/ruby/squash/dir.h b/ruby/squash/dir.h
 new file mode 100644
 index 00000000..d3bf71a9
 --- /dev/null
-+++ b/ruby/include/squash/dir.h
++++ b/ruby/squash/dir.h
 @@ -0,0 +1,94 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -676,11 +676,11 @@ index 00000000..d3bf71a9
 +const char *		sqfs_dentry_name				(sqfs_dir_entry *entry);
 +
 +#endif
-diff --git a/ruby/include/squash/dirent.h b/ruby/include/squash/dirent.h
+diff --git a/ruby/squash/dirent.h b/ruby/squash/dirent.h
 new file mode 100644
 index 00000000..6ec2ac69
 --- /dev/null
-+++ b/ruby/include/squash/dirent.h
++++ b/ruby/squash/dirent.h
 @@ -0,0 +1,36 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
@@ -718,11 +718,11 @@ index 00000000..6ec2ac69
 +} SQUASH_DIR;
 +
 +#endif /* end of include guard: DIRENT_H_245C4278 */
-diff --git a/ruby/include/squash/fdtable.h b/ruby/include/squash/fdtable.h
+diff --git a/ruby/squash/fdtable.h b/ruby/squash/fdtable.h
 new file mode 100644
 index 00000000..d89c1014
 --- /dev/null
-+++ b/ruby/include/squash/fdtable.h
++++ b/ruby/squash/fdtable.h
 @@ -0,0 +1,32 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
@@ -756,11 +756,11 @@ index 00000000..d89c1014
 +extern struct squash_fdtable squash_global_fdtable;
 +
 +#endif /* end of include guard: FDTABLE_H_60F13289 */
-diff --git a/ruby/include/squash/file.h b/ruby/include/squash/file.h
+diff --git a/ruby/squash/file.h b/ruby/squash/file.h
 new file mode 100644
 index 00000000..eafd8ed4
 --- /dev/null
-+++ b/ruby/include/squash/file.h
++++ b/ruby/squash/file.h
 @@ -0,0 +1,78 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -840,11 +840,11 @@ index 00000000..eafd8ed4
 +	sqfs_blocklist *bl, sqfs_off_t start);
 +
 +#endif
-diff --git a/ruby/include/squash/fs.h b/ruby/include/squash/fs.h
+diff --git a/ruby/squash/fs.h b/ruby/squash/fs.h
 new file mode 100644
 index 00000000..9c3c6998
 --- /dev/null
-+++ b/ruby/include/squash/fs.h
++++ b/ruby/squash/fs.h
 @@ -0,0 +1,132 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -978,11 +978,11 @@ index 00000000..9c3c6998
 +sqfs_inode_id sqfs_inode_root(sqfs *fs);
 +
 +#endif
-diff --git a/ruby/include/squash/hash.h b/ruby/include/squash/hash.h
+diff --git a/ruby/squash/hash.h b/ruby/squash/hash.h
 new file mode 100644
 index 00000000..c0eaed0a
 --- /dev/null
-+++ b/ruby/include/squash/hash.h
++++ b/ruby/squash/hash.h
 @@ -0,0 +1,63 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1047,11 +1047,11 @@ index 00000000..c0eaed0a
 +sqfs_err sqfs_hash_remove(sqfs_hash *h, sqfs_hash_key k);
 +
 +#endif
-diff --git a/ruby/include/squash/mutex.h b/ruby/include/squash/mutex.h
+diff --git a/ruby/squash/mutex.h b/ruby/squash/mutex.h
 new file mode 100644
 index 00000000..61d71189
 --- /dev/null
-+++ b/ruby/include/squash/mutex.h
++++ b/ruby/squash/mutex.h
 @@ -0,0 +1,32 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
@@ -1085,11 +1085,11 @@ index 00000000..61d71189
 +int MUTEX_DESTORY(MUTEX *mutex);
 +
 +#endif //LIBSQUASH_MUTEX_H
-diff --git a/ruby/include/squash/nonstd.h b/ruby/include/squash/nonstd.h
+diff --git a/ruby/squash/nonstd.h b/ruby/squash/nonstd.h
 new file mode 100644
 index 00000000..f14b6fed
 --- /dev/null
-+++ b/ruby/include/squash/nonstd.h
++++ b/ruby/squash/nonstd.h
 @@ -0,0 +1,34 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1125,11 +1125,11 @@ index 00000000..f14b6fed
 +dev_t sqfs_makedev(int maj, int min);
 +
 +#endif
-diff --git a/ruby/include/squash/private.h b/ruby/include/squash/private.h
+diff --git a/ruby/squash/private.h b/ruby/squash/private.h
 new file mode 100644
 index 00000000..3d39ce06
 --- /dev/null
-+++ b/ruby/include/squash/private.h
++++ b/ruby/squash/private.h
 @@ -0,0 +1,35 @@
 +/*
 + * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1166,11 +1166,11 @@ index 00000000..3d39ce06
 +sqfs_err sqfs_stat(sqfs *fs, sqfs_inode *inode, struct stat *st);
 +
 +#endif
-diff --git a/ruby/include/squash/squashfs_fs.h b/ruby/include/squash/squashfs_fs.h
+diff --git a/ruby/squash/squashfs_fs.h b/ruby/squash/squashfs_fs.h
 new file mode 100644
 index 00000000..fda66667
 --- /dev/null
-+++ b/ruby/include/squash/squashfs_fs.h
++++ b/ruby/squash/squashfs_fs.h
 @@ -0,0 +1,318 @@
 +/*
 + * squashfs_fs.h
@@ -1490,11 +1490,11 @@ index 00000000..fda66667
 +};
 +
 +#endif
-diff --git a/ruby/include/squash/stack.h b/ruby/include/squash/stack.h
+diff --git a/ruby/squash/stack.h b/ruby/squash/stack.h
 new file mode 100644
 index 00000000..99782128
 --- /dev/null
-+++ b/ruby/include/squash/stack.h
++++ b/ruby/squash/stack.h
 @@ -0,0 +1,54 @@
 +/*
 + * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1550,11 +1550,11 @@ index 00000000..99782128
 +sqfs_err sqfs_stack_top(sqfs_stack *s, void *vout);
 +
 +#endif
-diff --git a/ruby/include/squash/table.h b/ruby/include/squash/table.h
+diff --git a/ruby/squash/table.h b/ruby/squash/table.h
 new file mode 100644
 index 00000000..7dea081f
 --- /dev/null
-+++ b/ruby/include/squash/table.h
++++ b/ruby/squash/table.h
 @@ -0,0 +1,41 @@
 +/*
 + * Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1597,11 +1597,11 @@ index 00000000..7dea081f
 +sqfs_err sqfs_table_get(sqfs_table *table, sqfs *fs, size_t idx, void *buf);
 +
 +#endif
-diff --git a/ruby/include/squash/traverse.h b/ruby/include/squash/traverse.h
+diff --git a/ruby/squash/traverse.h b/ruby/squash/traverse.h
 new file mode 100644
 index 00000000..23a9c84f
 --- /dev/null
-+++ b/ruby/include/squash/traverse.h
++++ b/ruby/squash/traverse.h
 @@ -0,0 +1,69 @@
 +/*
 + * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1672,11 +1672,11 @@ index 00000000..23a9c84f
 +sqfs_err sqfs_traverse_prune(sqfs_traverse *trv);
 +
 +#endif
-diff --git a/ruby/include/squash/util.h b/ruby/include/squash/util.h
+diff --git a/ruby/squash/util.h b/ruby/squash/util.h
 new file mode 100644
 index 00000000..a7f14e69
 --- /dev/null
-+++ b/ruby/include/squash/util.h
++++ b/ruby/squash/util.h
 @@ -0,0 +1,41 @@
 +/*
 + * Copyright (c) 2014 Dave Vasilevsky <dave@vasilevsky.ca>
@@ -1719,11 +1719,11 @@ index 00000000..a7f14e69
 +sqfs_err sqfs_open_image(sqfs *fs, const uint8_t *image, size_t offset);
 +
 +#endif
-diff --git a/ruby/include/squash/windows.h b/ruby/include/squash/windows.h
+diff --git a/ruby/squash/windows.h b/ruby/squash/windows.h
 new file mode 100644
 index 00000000..e336a359
 --- /dev/null
-+++ b/ruby/include/squash/windows.h
++++ b/ruby/squash/windows.h
 @@ -0,0 +1,107 @@
 +/*
 + * Copyright (c) 2017 Minqi Pan <pmq2001@gmail.com>
