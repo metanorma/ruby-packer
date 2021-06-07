@@ -1,7 +1,7 @@
 From c3f8155d88ce8d04288020848535f16bcc940c29 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 2 Jun 2021 21:32:39 +0300
-Subject: [PATCH 8/8] github ssl certificate
+Subject: [PATCH 8/7] github ssl certificate
 
 ---
  .../DigiCertHighAssuranceEVRootCA.pem         | 23 +++++++++++++++++++
@@ -37,6 +37,6 @@ index 00000000..9e6810ab
 +vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
 ++OkuE6N36B9K
 +-----END CERTIFICATE-----
--- 
+--
 2.24.3 (Apple Git-128)
 

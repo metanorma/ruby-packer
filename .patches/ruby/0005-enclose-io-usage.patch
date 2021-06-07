@@ -1,7 +1,7 @@
 From 73bae71d86a15f34ba6aab04fa8de05933e4e495 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 20:05:44 +0300
-Subject: [PATCH 6/8] enclose io usage
+Subject: [PATCH 6/7] enclose io usage
 
 ---
  ruby/dir.c                        | 23 +++++++++--
@@ -25,7 +25,7 @@ index 6614ef2f..ce435e02 100644
 @@ -121,6 +121,10 @@ char *strchr(char*,char);
  # define NORMALIZE_UTF8PATH 0
  #endif
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +#include "enclose_io.h"
 +// --------- [Enclose.io Hack end] ---------
@@ -62,7 +62,7 @@ index 6614ef2f..ce435e02 100644
  #endif
 @@ -1741,9 +1752,13 @@ is_case_sensitive(DIR *dirp, const char *path)
      const uint32_t mask = VOL_CAP_FMT_CASE_SENSITIVE;
- 
+
  #   if defined HAVE_FGETATTRLIST
 +    if (squash_find_entry(dirp)) { return 1; }
 +
@@ -85,7 +85,7 @@ index 6614ef2f..ce435e02 100644
  						flags, &new_pathtype);
 @@ -3148,7 +3163,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
      path = RSTRING_PTR(dirname);
- 
+
  #if defined HAVE_GETATTRLIST && defined ATTR_DIR_ENTRYCOUNT
 -    {
 +    if (!enclose_io_is_path(path)) {
@@ -99,7 +99,7 @@ index f8fb34ca..793485fa 100644
 @@ -115,6 +115,10 @@ dln_loaderror(const char *format, ...)
  #define isdirsep(x) ((x) == '/')
  #endif
- 
+
 +// ======= [Enclose.io Hack start] =========
 +#include "enclose_io.h"
 +// ======= [Enclose.io Hack end] =========
@@ -141,7 +141,7 @@ index 0a810af4..d2c0e2de 100644
 @@ -88,6 +88,10 @@ int flock(int, int);
  #define lstat stat
  #endif
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +#include "enclose_io.h"
 +// --------- [Enclose.io Hack end] ---------
@@ -156,7 +156,7 @@ index 2157a94a..9bf01992 100644
 @@ -133,6 +133,10 @@ off_t __syscall(quad_t number, ...);
  #define rename(f, t)	rb_w32_urename((f), (t))
  #endif
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +#include "enclose_io.h"
 +// --------- [Enclose.io Hack end] ---------
@@ -171,7 +171,7 @@ index 618bc793..d2a17847 100644
 @@ -25,12 +25,28 @@ class Gem::PathSupport
    def initialize(env)
      @home     = env["GEM_HOME"] || Gem.default_dir
- 
+
 +    # --------- [Enclose.io Hack start] ---------
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
 +    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
@@ -182,9 +182,9 @@ index 618bc793..d2a17847 100644
      if File::ALT_SEPARATOR then
        @home   = @home.gsub(File::ALT_SEPARATOR, File::SEPARATOR)
      end
- 
+
      @path = split_gem_path env["GEM_PATH"], @home
- 
+
 +    # --------- [Enclose.io Hack start] ---------
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
 +    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
@@ -195,7 +195,7 @@ index 618bc793..d2a17847 100644
 +    # --------- [Enclose.io Hack end] ---------
 +
      @spec_cache_dir = env["GEM_SPEC_CACHE"] || Gem.default_spec_cache_dir
- 
+
      @spec_cache_dir = @spec_cache_dir.dup.untaint
 diff --git a/ruby/prelude.c b/ruby/prelude.c
 index 2a572c2b..2a64a0c3 100644
@@ -204,7 +204,7 @@ index 2a572c2b..2a64a0c3 100644
 @@ -195,6 +195,55 @@ static const struct {
  #line 196 "prelude.c"
  };
- 
+
 +static const char prelude_name_enclose_io[] = "<internal:enclose_io_prelude>";
 +static const char prelude_code_enclose_io[] =
 +"\n class << Process"
@@ -254,13 +254,13 @@ index 2a572c2b..2a64a0c3 100644
 +"\n   Dir.chdir('/__enclose_io_memfs__/local')"
 +"\n end"
 +;
- 
+
  #define PRELUDE_STR(n) rb_usascii_str_new_static(prelude_##n.L0, sizeof(prelude_##n))
  #ifdef __GNUC__
 @@ -237,6 +286,13 @@ Init_prelude(void)
      prelude_eval(PRELUDE_STR(code0), PRELUDE_STR(name0), 1);
      prelude_eval(PRELUDE_STR(code1), PRELUDE_STR(name1), 1);
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +    prelude_eval(
 +      rb_usascii_str_new(prelude_code_enclose_io, sizeof(prelude_code_enclose_io) - 1),
@@ -289,7 +289,7 @@ index 0973ea66..cd10aeb4 100644
      rb_define_global_function("exit", rb_f_exit, -1);
      rb_define_global_function("abort", rb_f_abort, -1);
 @@ -8047,3 +8053,65 @@ Init_process(void)
- 
+
      InitVM(process);
  }
 +
@@ -388,7 +388,7 @@ index 2222744f..d4544d34 100644
 @@ -30,6 +30,10 @@
  const char ruby_hexdigits[] = "0123456789abcdef0123456789ABCDEF";
  #define hexdigit ruby_hexdigits
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +#include "enclose_io.h"
 +// --------- [Enclose.io Hack end] ---------
@@ -403,7 +403,7 @@ index 6f157d4d..01e018ba 100644
 @@ -10,6 +10,10 @@
  #include <shlwapi.h>
  #include "win32/file.h"
- 
+
 +// --------- [Enclose.io Hack start] ---------
 +#include "enclose_io.h"
 +// --------- [Enclose.io Hack end] ---------
@@ -425,7 +425,7 @@ index 5cb842ff..9fed223e 100644
 +// --------- [Enclose.io Hack end] ---------
 +
  #define isdirsep(x) ((x) == '/' || (x) == '\\')
- 
+
  #if defined _MSC_VER && _MSC_VER <= 1200
 @@ -849,6 +854,11 @@ static int w32_cmdvector(const WCHAR *, char ***, UINT, rb_encoding *);
  void
@@ -438,11 +438,11 @@ index 5cb842ff..9fed223e 100644
 +
  #if RUBY_MSVCRT_VERSION >= 80
      static void set_pioinfo_extra(void);
- 
+
 @@ -866,6 +876,28 @@ rb_w32_sysinit(int *argc, char ***argv)
      //
      *argc = w32_cmdvector(GetCommandLineW(), argv, CP_UTF8, &OnigEncodingUTF_8);
- 
+
 +    // --------- [Enclose.io Hack start] ---------
 +    #ifdef RUBY_PACKER_ENTRANCE
 +    new_argc = *argc;
@@ -476,12 +476,12 @@ index 5cb842ff..9fed223e 100644
 +	    curr->str[curr->len] = '\0';
 +	}
  	curr->flags |= NTMALLOC;
- 
+
  	if (globbing && (tail = cmdglob(curr, cmdtail, cp, enc))) {
 @@ -6980,6 +7015,11 @@ rb_w32_read(int fd, void *buf, size_t size)
  	return -1;
      }
- 
+
 +    if (SQUASH_VALID_VFD(fd)) {
 +	// TODO how about Binary Mode File I/O?
 +	return _read(fd, buf, size);
@@ -490,6 +490,6 @@ index 5cb842ff..9fed223e 100644
      if (_osfile(fd) & FTEXT) {
  	return _read(fd, buf, size);
      }
--- 
+--
 2.24.3 (Apple Git-128)
 

@@ -1,7 +1,7 @@
 From 376ffd3dcda51fb208497e6e8b3396c05dc49f01 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:34:49 +0300
-Subject: [PATCH 3/8] makefile
+Subject: [PATCH 3/7] makefile
 
 ---
  ruby/Makefile.in        |  6 +++---
@@ -21,23 +21,23 @@ index 25075f59..bdaab448 100644
 -		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(OUTFLAG)$@
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
  		$(Q) $(POSTLINK)
- 
+
  $(PROGRAM):
  		@$(RM) $@
  		$(ECHO) linking $@
 -		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(EXTOBJS) $(LIBRUBYARG) $(MAINLIBS) $(LIBS) $(EXTLIBS) $(OUTFLAG)$@
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(EXTOBJS) $(LIBRUBYARG) $(MAINLIBS) $(LIBS) $(EXTLIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
  		$(Q) $(POSTLINK)
- 
+
  # We must `rm' the library each time this rule is invoked because "updating" a
 @@ -247,7 +247,7 @@ $(LIBRUBY_A):
- 
+
  verify-static-library: $(LIBRUBY_A)
  		$(ECHO) verifying static-library $@
 -		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(OUTFLAG)conftest$(EXEEXT)
 +		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)conftest$(EXEEXT) $(LDFLAGS)
  		@$(RMALL) conftest$(EXEEXT) conftest.c conftest.dSYM
- 
+
  $(LIBRUBY_SO):
 diff --git a/ruby/ext/dbm/extconf.rb b/ruby/ext/dbm/extconf.rb
 index 514aa3f8..6ae7dfd3 100644
@@ -50,7 +50,7 @@ index 514aa3f8..6ae7dfd3 100644
 +# --------- [Enclose.io Hack start] ---------
 +dblib = %w(gdbm_compat)
 +# --------- [Enclose.io Hack end] ---------
- 
+
  headers = {
    "libc" => ["ndbm.h"], # 4.3BSD original ndbm, Berkeley DB 1 in 4.4BSD libc.
 diff --git a/ruby/lib/mkmf.rb b/ruby/lib/mkmf.rb
@@ -58,15 +58,15 @@ index 7f53bb4b..432171f0 100644
 --- a/ruby/lib/mkmf.rb
 +++ b/ruby/lib/mkmf.rb
 @@ -2680,17 +2680,17 @@ def MAIN_DOES_NOTHING(*refs)
- 
+
    TRY_LINK = config_string('TRY_LINK') ||
      "$(CC) #{OUTFLAG}#{CONFTEST}#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
 -    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS)"
 +    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS) $(LDFLAGS)"
- 
+
    ##
    # Command which will link a shared library
- 
+
    LINK_SO = (config_string('LINK_SO') || "").sub(/^$/) do
      if CONFIG["DLEXT"] == $OBJEXT
 -      "ld $(DLDFLAGS) -r -o $@ $(OBJS)\n"
@@ -77,7 +77,7 @@ index 7f53bb4b..432171f0 100644
 +      "$(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS) $(DLDFLAGS)"
      end
    end
- 
+
 diff --git a/ruby/win32/Makefile.sub b/ruby/win32/Makefile.sub
 index 70440e1c..2067130c 100644
 --- a/ruby/win32/Makefile.sub
@@ -105,7 +105,7 @@ index 70440e1c..2067130c 100644
 @@ -990,10 +992,42 @@ miniruby$(EXEEXT):
  miniruby.rc:
  		@exit > $@
- 
+
 +ruby_static.exe:	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
 +		$(ECHO) linking $(@:\=/)
 +		$(Q) $(PURIFY) $(CC) $(CFLAGS) $(MAINOBJ) $(RUBY_INSTALL_NAME).res \
@@ -164,6 +164,6 @@ index 70440e1c..2067130c 100644
  			$(OUTFLAG)$@ $(LIBRUBYARG) -link $(LDFLAGS) $(XLDFLAGS)
  		$(Q) $(LDSHARED_0)
  		$(Q) $(LDSHARED_1)
--- 
+--
 2.24.3 (Apple Git-128)
 
