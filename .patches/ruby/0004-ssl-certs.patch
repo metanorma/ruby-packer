@@ -1,7 +1,7 @@
 From 3fe8d065ec161676d0f942b310063bc5ab05062c Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:50:34 +0300
-Subject: [PATCH 4/8] ssl certs
+Subject: [PATCH 4/7] ssl certs
 
 ---
  .../index.rubygems.org/GlobalSignRootCA.pem   | 21 ----------------
@@ -136,7 +136,7 @@ index 97a64af3..91d78b7f 100644
 @@ -51,12 +51,16 @@ def test_accessing_rubygems
        assert_https('rubygems.org')
      end
- 
+
 -    def test_accessing_fastly
 -      assert_https('rubygems.global.ssl.fastly.net')
 +    def test_accessing_www_rubygems
@@ -146,13 +146,13 @@ index 97a64af3..91d78b7f 100644
 +    def test_accessing_staging
 +      assert_https('staging.rubygems.org')
      end
- 
+
      def test_accessing_new_index
 -      assert_https('fastly.rubygems.org')
 +      assert_https('index.rubygems.org')
      end
- 
+
    end
--- 
+--
 2.24.3 (Apple Git-128)
 

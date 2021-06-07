@@ -1,7 +1,7 @@
 From b583a28eedd9abf2af3ee23ff82896685eb02554 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:44:59 +0300
-Subject: [PATCH 1/8] squashfs source
+Subject: [PATCH 1/7] squashfs source
 
 ---
  ruby/common.mk                    |  22 +-
@@ -92,7 +92,7 @@ index 2175f67e..2b39acac 100644
 @@ -70,7 +70,27 @@ ENC_MK        = enc.mk
  MAKE_ENC      = -f $(ENC_MK) V="$(V)" UNICODE_HDR_DIR="$(UNICODE_HDR_DIR)" \
  		RUBY="$(MINIRUBY)" MINIRUBY="$(MINIRUBY)" $(mflags)
- 
+
 -COMMONOBJS    = array.$(OBJEXT) \
 +COMMONOBJS    = squash_cache.$(OBJEXT) \
 +		squash_decompress.$(OBJEXT) \
@@ -294,7 +294,7 @@ index 00000000..fceea2e0
 +
 +/*
 + * Returns a pointer to the next directory entry.
-+ * It returns NULL upon reaching the end of the directory or on error. 
++ * It returns NULL upon reaching the end of the directory or on error.
 + * In the event of an error, error is set to the reason of the error.
 + */
 +struct SQUASH_DIRENT * squash_readdir(SQUASH_DIR *dirp);
@@ -328,7 +328,7 @@ index 00000000..fceea2e0
 +/*
 + * Reads the directory dirname of a SquashFS fs and
 + * builds an array of pointers to directory entries using malloc.
-+ * If successful it returns the number of entries in the array; 
++ * If successful it returns the number of entries in the array;
 + * otherwise -1 is returned and error is set to the reason of the error.
 + * A pointer to the array of directory entries is stored
 + * in the location referenced by namelist (even if the number of entries is 0),
@@ -417,12 +417,12 @@ index 00000000..e60a5924
 +typedef struct {
 +	sqfs_cache_idx *idxs;
 +	uint8_t *buf;
-+	
++
 +	sqfs_cache_dispose dispose;
-+	
++
 +	size_t size, count;
 +	size_t next; /* next block to evict */
-+	
++
 +	MUTEX mutex;
 +} sqfs_cache;
 +
@@ -809,7 +809,7 @@ index 00000000..eafd8ed4
 +	short started;
 +
 +	uint64_t pos;
-+	
++
 +	uint64_t block;			/* Points to next data block location */
 +	sqfs_blocklist_entry header; /* Packed blocksize data */
 +	uint32_t input_size;				 /* Extracted size of this block */
@@ -900,9 +900,9 @@ index 00000000..9c3c6998
 +struct sqfs_inode {
 +	struct squashfs_base_inode base;
 +	int nlink;
-+	
++
 +	sqfs_md_cursor next;
-+	
++
 +	union {
 +		struct {
 +			int major, minor;
@@ -1639,14 +1639,14 @@ index 00000000..23a9c84f
 +	short dir_end;
 +	sqfs_dir_entry entry;
 +	char *path;
-+	
-+	
++
++
 +	/* private */
-+	int state;	
++	int state;
 +	sqfs *fs;
 +	sqfs_name namebuf;
 +	sqfs_stack stack;
-+	
++
 +	size_t path_size, path_cap;
 +	size_t path_last_size;
 +} sqfs_traverse;
@@ -1876,12 +1876,12 @@ index 00000000..5a999cc8
 +	cache->next = 0;
 +
 +	MUTEX_INIT(&cache->mutex);
-+	
++
 +	cache->idxs = calloc(count, sizeof(sqfs_cache_idx));
 +	cache->buf = calloc(count, size);
 +	if (cache->idxs && cache->buf)
 +		return SQFS_OK;
-+	
++
 +	sqfs_cache_destroy(cache);
 +	return SQFS_ERR;
 +}
@@ -1920,10 +1920,10 @@ index 00000000..5a999cc8
 +void *sqfs_cache_add(sqfs_cache *cache, sqfs_cache_idx idx) {
 +	size_t i = (cache->next++);
 +	cache->next %= cache->count;
-+	
++
 +	if (cache->idxs[i] != SQFS_CACHE_IDX_INVALID)
 +		cache->dispose(sqfs_cache_entry(cache, i));
-+	
++
 +	cache->idxs[i] = idx;
 +	return sqfs_cache_entry(cache, i);
 +}
@@ -2060,14 +2060,14 @@ index 00000000..e9842af8
 +	dir->cur.offset = inode->xtra.dir.offset;
 +	dir->offset = 0;
 +	dir->total = inode->xtra.dir.dir_size - 3;
-+	
++
 +	if (offset) {
 +		/* Fast forward to the given offset */
 +		sqfs_err err = sqfs_dir_ff_offset(fs, inode, dir, offset);
 +		if (err)
 +			return err;
 +	}
-+	
++
 +	return SQFS_OK;
 +}
 +
@@ -2106,7 +2106,7 @@ index 00000000..e9842af8
 +const char *sqfs_dentry_name(sqfs_dir_entry *entry) {
 +	if (!entry->name)
 +		return NULL;
-+	
++
 +	entry->name[sqfs_dentry_name_size(entry)] = '\0';
 +	return entry->name;
 +}
@@ -2120,33 +2120,33 @@ index 00000000..e9842af8
 +short sqfs_dir_next(sqfs *fs, sqfs_dir *dir, sqfs_dir_entry *entry,
 +		sqfs_err *err) {
 +	struct squashfs_dir_entry e;
-+	
++
 +	*err = SQFS_OK;
 +	entry->offset = dir->offset;
-+	
++
 +	while (dir->header.count == 0) {
 +		if (dir->offset >= dir->total)
 +			return 0;
-+		
++
 +		if ((*err = sqfs_dir_md_read(fs, dir, &dir->header, sizeof(dir->header))))
 +			return 0;
 +		++(dir->header.count); /* biased by one */
 +	}
-+	
++
 +	if ((*err = sqfs_dir_md_read(fs, dir, &e, sizeof(e))))
 +		return 0;
 +	--(dir->header.count);
-+	
++
 +	entry->type = e.type;
 +	entry->name_size = e.size + 1;
 +	entry->inode = ((uint64_t)dir->header.start_block << 16) + e.offset;
 +	/* e.inode_number is signed */
 +	entry->inode_number = dir->header.inode_number + (int16_t)e.inode_number;
-+	
++
 +	*err = sqfs_dir_md_read(fs, dir, entry->name, sqfs_dentry_name_size(entry));
 +	if (*err)
 +		return 0;
-+	
++
 +	entry->next_offset = dir->offset;
 +
 +	return 1;
@@ -2161,19 +2161,19 @@ index 00000000..e9842af8
 +
 +	if (count == 0)
 +		return SQFS_OK;
-+	
++
 +	while (count--) {
 +		sqfs_err err;
 +		short stop = 0;
-+		
++
 +		if ((err = sqfs_md_read(fs, &cur, &idx, sizeof(idx))))
 +			return err;
-+		
++
 +		if ((err = func(fs, &cur, &idx, &stop, arg)))
 +			return err;
 +		if (stop)
 +			break;
-+		
++
 +		dir->cur.block = idx.start_block + fs->sb->directory_table_start;
 +		dir->offset = idx.index;
 +	}
@@ -2187,12 +2187,12 @@ index 00000000..e9842af8
 +static sqfs_err sqfs_dir_ff_offset_f(sqfs *fs, sqfs_md_cursor *cur,
 +		struct squashfs_dir_index *index, short *stop, void *arg) {
 +	sqfs_off_t offset = *(sqfs_off_t*)arg;
-+	
++
 +	if (index->index >= offset) {
 +		*stop = 1;
 +		return SQFS_OK;
 +	}
-+	
++
 +	return sqfs_md_read(fs, cur, NULL, index->size + 1); /* skip name */
 +}
 +
@@ -2200,15 +2200,15 @@ index 00000000..e9842af8
 +		sqfs_off_t offset) {
 +	sqfs_err err;
 +	sqfs_dir_entry entry;
-+	
++
 +	err = sqfs_dir_ff_header(fs, inode, dir, sqfs_dir_ff_offset_f, &offset);
 +	if (err)
 +		return err;
-+	
++
 +	sqfs_dentry_init(&entry, NULL);
 +	while (dir->offset < offset && sqfs_dir_next(fs, dir, &entry, &err))
 +		; /* pass */
-+	
++
 +	if (err)
 +		return err;
 +	return dir->offset == offset ? SQFS_OK : SQFS_ERR;
@@ -2232,11 +2232,11 @@ index 00000000..e9842af8
 +	if ((err = sqfs_md_read(fs, cur, args->name, name_size)))
 +		return err;
 +	args->name[name_size] = '\0';
-+	
++
 +	order = strncmp(args->name, args->cmp, args->cmplen);
 +	if (order > 0 || (order == 0 && name_size > args->cmplen))
 +		*stop = 1;
-+	
++
 +	return SQFS_OK;
 +}
 +
@@ -2250,14 +2250,14 @@ index 00000000..e9842af8
 +
 +	if ((err = sqfs_dir_open(fs, inode, &dir, 0)))
 +		return err;
-+	
++
 +	/* Fast forward to header */
 +	arg.cmp = name;
 +	arg.cmplen = namelen;
 +	arg.name = entry->name;
 +	if ((err = sqfs_dir_ff_header(fs, inode, &dir, sqfs_dir_ff_name_f, &arg)))
 +		return err;
-+	
++
 +	/* Iterate to find the right entry */
 +	while (sqfs_dir_next(fs, &dir, entry, &err)) {
 +		int order = strncmp(sqfs_dentry_name(entry), name, namelen);
@@ -2266,14 +2266,14 @@ index 00000000..e9842af8
 +		if (order >= 0)
 +			break;
 +	}
-+	
++
 +	return err;
 +}
 +
 +static sqfs_err clear_dot_dot(char *path)
 +{
 +	char *dot_dot, *dot_dot_left;
-+	
++
 +	// we might get a path like /a/b/../../c/d
 +	// in which case we need to interpret dot-dot's
 +	while ((dot_dot = strstr(path, "/../"))) {
@@ -2347,13 +2347,13 @@ index 00000000..e9842af8
 +				memcpy(new_path, base_path, pos + 2);
 +				memcpy(new_path + pos + 2, buf_link, link_length);
 +				new_path[pos + 2 + link_length] = '\0';
-+				
++
 +				error = clear_dot_dot(new_path);
 +				if (SQFS_OK != error) {
 +					errno = ENOENT;
 +					return SQFS_ERR;
 +				}
-+				
++
 +				// find node from /
 +				error = sqfs_inode_get(fs, node, sqfs_inode_root(fs));
 +				if (SQFS_OK != error) {
@@ -2410,15 +2410,15 @@ index 00000000..e9842af8
 +		ret = SQFS_OK; /* not found */
 +		goto exit;
 +	}
-+	
++
 +	while (*path) {
 +		const char *name;
 +		size_t size;
-+		
++
 +		/* Find next path component */
 +		while (*path == '/') /* skip leading slashes */
 +			++path;
-+		
++
 +		name = path;
 +		while (*path && *path != '/')
 +			++path;
@@ -2468,7 +2468,7 @@ index 00000000..e9842af8
 +			}
 +		}
 +	}
-+	
++
 +	*found = 1;
 +	ret = SQFS_OK;
 +exit:
@@ -2505,7 +2505,7 @@ index 00000000..2a9d9fd1
 +	short found;
 +	SQUASH_DIR *dir = calloc(1, sizeof(SQUASH_DIR));
 +	int *handle;
-+	
++
 +	if (NULL == dir)
 +	{
 +		errno = ENOMEM;
@@ -2622,7 +2622,7 @@ index 00000000..2a9d9fd1
 +			sqfs_dir_entry *entry = &dirp->entries[dirp->actual_nr].entry;
 +			struct SQUASH_DIRENT *sysentry = &dirp->entries[dirp->actual_nr].sysentry;
 +			size_t minsize;
-+			
++
 +			sysentry->d_ino = entry->inode_number;
 +			minsize = entry->name_size;
 +			if (SQUASHFS_NAME_LEN < minsize) {
@@ -2638,7 +2638,7 @@ index 00000000..2a9d9fd1
 +			sysentry->d_name[minsize] = '\0';
 +			// TODO special treatment of L types
 +			switch (entry->type)
-+			{	
++			{
 +			case SQUASHFS_DIR_TYPE:
 +			case SQUASHFS_LDIR_TYPE:
 +				sysentry->d_type = DT_DIR;
@@ -3259,10 +3259,10 @@ index 00000000..d680b5fc
 +sqfs_err sqfs_frag_entry(sqfs *fs, struct squashfs_fragment_entry *frag,
 +		uint32_t idx) {
 +	sqfs_err err = SQFS_OK;
-+	
++
 +	if (idx == SQUASHFS_INVALID_FRAG)
 +		return SQFS_ERR;
-+	
++
 +	err = sqfs_table_get(&fs->frag_table, fs, idx, frag);
 +	return err;
 +}
@@ -3271,19 +3271,19 @@ index 00000000..d680b5fc
 +		size_t *offset, size_t *size, sqfs_block **block) {
 +	struct squashfs_fragment_entry frag;
 +	sqfs_err err = SQFS_OK;
-+	
++
 +	if (!S_ISREG(inode->base.mode))
 +		return SQFS_ERR;
-+	
++
 +	err = sqfs_frag_entry(fs, &frag, inode->xtra.reg.frag_idx);
 +	if (err)
 +		return err;
-+	
++
 +	err = sqfs_data_cache(fs, &fs->frag_cache, frag.start_block,
 +		frag.size, block);
 +	if (err)
 +		return SQFS_ERR;
-+	
++
 +	*offset = inode->xtra.reg.frag_off;
 +	*size = inode->xtra.reg.file_size % fs->sb->block_size;
 +	return SQFS_OK;
@@ -3312,61 +3312,61 @@ index 00000000..d680b5fc
 +sqfs_err sqfs_blocklist_next(sqfs_blocklist *bl) {
 +	sqfs_err err = SQFS_OK;
 +	short compressed;
-+	
++
 +	if (bl->remain == 0)
 +		return SQFS_ERR;
 +	--(bl->remain);
-+	
++
 +	err = sqfs_md_read(bl->fs, &bl->cur, &bl->header,
 +		sizeof(bl->header));
 +	if (err)
 +		return err;
-+	
++
 +	bl->block += bl->input_size;
 +	sqfs_data_header(bl->header, &compressed, &bl->input_size);
-+	
++
 +	if (bl->started)
 +		bl->pos += bl->fs->sb->block_size;
 +	bl->started = 1;
-+	
++
 +	return SQFS_OK;
 +}
 +
 +sqfs_err sqfs_read_range(sqfs *fs, sqfs_inode *inode, sqfs_off_t start,
 +		sqfs_off_t *size, void *buf) {
 +	sqfs_err err = SQFS_OK;
-+	
++
 +	sqfs_off_t file_size;
 +	size_t block_size;
 +	sqfs_blocklist bl;
-+	
++
 +	size_t read_off;
 +	char *buf_orig;
-+	
++
 +	if (!S_ISREG(inode->base.mode))
 +		return SQFS_ERR;
-+	
++
 +	file_size = inode->xtra.reg.file_size;
 +	block_size = fs->sb->block_size;
-+	
++
 +	if (*size < 0 || start > file_size)
 +		return SQFS_ERR;
 +	if (start == file_size) {
 +		*size = 0;
 +		return SQFS_OK;
 +	}
-+	
++
 +	err = sqfs_blockidx_blocklist(fs, inode, &bl, start);
 +	if (err)
 +		return err;
-+	
++
 +	read_off = start % block_size;
 +	buf_orig = buf;
 +	while (*size > 0) {
 +		sqfs_block *block = NULL;
 +		size_t data_off, data_size;
 +		size_t take;
-+		
++
 +		short fragment = (bl.remain == 0);
 +		if (fragment) { /* fragment */
 +			if (inode->xtra.reg.frag_idx == SQUASHFS_INVALID_FRAG)
@@ -3374,12 +3374,12 @@ index 00000000..d680b5fc
 +			err = sqfs_frag_block(fs, inode, &data_off, &data_size, &block);
 +			if (err)
 +				return err;
-+		} else {			
++		} else {
 +			if ((err = sqfs_blocklist_next(&bl)))
 +				return err;
 +			if (bl.pos + block_size <= start)
 +				continue;
-+			
++
 +			data_off = 0;
 +			if (bl.input_size == 0) { /* Hole! */
 +				data_size = (size_t)(file_size - bl.pos);
@@ -3393,7 +3393,7 @@ index 00000000..d680b5fc
 +				data_size = block->size;
 +			}
 +		}
-+		
++
 +		take = data_size - read_off;
 +		if (take > *size)
 +			take = (size_t)(*size);
@@ -3406,11 +3406,11 @@ index 00000000..d680b5fc
 +		read_off = 0;
 +		*size -= take;
 +		buf = (char*)buf + take;
-+		
++
 +		if (fragment)
 +			break;
 +	}
-+	
++
 +	*size = (char*)buf - buf_orig;
 +	return *size ? SQFS_OK : SQFS_ERR;
 +}
@@ -3453,19 +3453,19 @@ index 00000000..d680b5fc
 +	size_t blocks;	/* Number of blocks in the file */
 +	size_t md_size; /* Amount of metadata necessary to hold the blocksizes */
 +	size_t count; 	/* Number of block-index entries necessary */
-+	
++
 +	sqfs_blockidx_entry *blockidx;
 +	sqfs_blocklist bl;
-+	
++
 +	/* For the cache */
 +	sqfs_cache_idx idx;
 +	sqfs_blockidx_entry **cachep;
 +
 +	size_t i = 0;
 +	short first = 1;
-+	
++
 +	*out = NULL;
-+	
++
 +	blocks = sqfs_blocklist_count(fs, inode);
 +	md_size = blocks * sizeof(sqfs_blocklist_entry);
 +	count = (inode->next.offset + md_size - 1)
@@ -3473,7 +3473,7 @@ index 00000000..d680b5fc
 +	blockidx = malloc(count * sizeof(sqfs_blockidx_entry));
 +	if (!blockidx)
 +		return SQFS_ERR;
-+	
++
 +	sqfs_blocklist_init(fs, inode, &bl);
 +	while (bl.remain && i < count) {
 +		sqfs_err err = SQFS_OK;
@@ -3485,7 +3485,7 @@ index 00000000..d680b5fc
 +			blockidx[i++].md_block = (uint32_t)(bl.cur.block - fs->sb->inode_table_start);
 +		}
 +		first = 0;
-+		
++
 +		err = sqfs_blocklist_next(&bl);
 +		if (err) {
 +			free(blockidx);
@@ -3514,7 +3514,7 @@ index 00000000..d680b5fc
 +		ret = SQFS_OK;
 +		goto exit;
 +	}
-+	
++
 +	/* How many MD-blocks do we want to skip? */
 +	metablock = (bl->cur.offset + block * sizeof(sqfs_blocklist_entry))
 +		/ SQUASHFS_METADATA_SIZE;
@@ -3526,7 +3526,7 @@ index 00000000..d680b5fc
 +		ret = SQFS_OK; /* too small to index */
 +		goto exit;
 +	}
-+	
++
 +	/* Get the index, creating it if necessary */
 +	idx = inode->base.inode_number + 1; /* zero means invalid index */
 +	if ((bp = sqfs_cache_get(&fs->blockidx, idx))) {
@@ -3537,10 +3537,10 @@ index 00000000..d680b5fc
 +			goto exit;
 +		}
 +	}
-+	
++
 +	skipped = (metablock * SQUASHFS_METADATA_SIZE / sizeof(sqfs_blocklist_entry))
 +		- (bl->cur.offset / sizeof(sqfs_blocklist_entry));
-+	
++
 +	blockidx += metablock - 1;
 +	bl->cur.block = blockidx->md_block + fs->sb->inode_table_start;
 +	bl->cur.offset %= sizeof(sqfs_blocklist_entry);
@@ -3616,21 +3616,21 @@ index 00000000..d51ea265
 +sqfs_err sqfs_init(sqfs *fs, sqfs_fd_t fd, size_t offset) {
 +	sqfs_err err;
 +	memset(fs, 0, sizeof(*fs));
-+	
++
 +	fs->fd = fd;
 +	fs->offset = offset;
 +
 +	fs->sb = (struct squashfs_super_block *)(fd + fs->offset);
-+	
++
 +	if (fs->sb->s_magic != SQUASHFS_MAGIC) {
 +		return SQFS_BADFORMAT;
 +	}
 +	if (fs->sb->s_major != SQUASHFS_MAJOR || fs->sb->s_minor > SQUASHFS_MINOR)
 +		return SQFS_BADVERSION;
-+	
++
 +	if (!(fs->decompressor = sqfs_decompressor_get(fs->sb->compression)))
 +		return SQFS_BADCOMP;
-+	
++
 +	err = sqfs_table_init(&fs->id_table, fd, fs->sb->id_table_start + fs->offset,
 +		sizeof(uint32_t), fs->sb->no_ids);
 +	err |= sqfs_table_init(&fs->frag_table, fd, fs->sb->fragment_table_start + fs->offset,
@@ -3647,7 +3647,7 @@ index 00000000..d51ea265
 +		sqfs_destroy(fs);
 +		return SQFS_ERR;
 +	}
-+	
++
 +	return SQFS_OK;
 +}
 +
@@ -3679,7 +3679,7 @@ index 00000000..d51ea265
 +	sqfs_err err = SQFS_ERR;
 +	if (!(*block = malloc(sizeof(**block))))
 +		return SQFS_ERR;
-+	
++
 +	(*block)->data = (void *)((fs->fd) + (pos + fs->offset));
 +	(*block)->data_need_freeing = 0;
 +
@@ -3687,7 +3687,7 @@ index 00000000..d51ea265
 +		char *decomp = malloc(outsize);
 +		if (!decomp)
 +			goto error;
-+		
++
 +		err = fs->decompressor((*block)->data, size, decomp, &outsize);
 +		if (err) {
 +			free(decomp);
@@ -3714,15 +3714,15 @@ index 00000000..d51ea265
 +	uint16_t hdr;
 +	short compressed;
 +	uint16_t size;
-+	
++
 +	*data_size = 0;
-+	
++
 +	hdr = *(uint16_t *)(fs->fd + pos + fs->offset);
 +	pos += sizeof(hdr);
 +	*data_size += sizeof(hdr);
-+	
++
 +	sqfs_md_header(hdr, &compressed, &size);
-+	
++
 +	err = sqfs_block_read(fs, pos, compressed, size,
 +		SQUASHFS_METADATA_SIZE, block);
 +	*data_size += size;
@@ -3800,14 +3800,14 @@ index 00000000..d51ea265
 +		sqfs_err err = sqfs_md_cache(fs, &pos, &block);
 +		if (err)
 +			return err;
-+		
++
 +		take = block->size - cur->offset;
 +		if (take > size)
 +			take = size;
 +		if (buf)
 +			memcpy(buf, (char*)block->data + cur->offset, take);
 +		/* BLOCK CACHED, DON'T DISPOSE */
-+		
++
 +		if (buf)
 +			buf = (char*)buf + take;
 +		size -= take;
@@ -3864,10 +3864,10 @@ index 00000000..d51ea265
 +sqfs_err sqfs_export_inode(sqfs *fs, sqfs_inode_num n, sqfs_inode_id *i) {
 +	uint64_t r;
 +	sqfs_err err;
-+	
++
 +	if (!sqfs_export_ok(fs))
 +		return SQFS_UNSUP;
-+	
++
 +	err = sqfs_table_get(&fs->export_table, fs, n - 1, &r);
 +	if (err)
 +		return err;
@@ -3896,16 +3896,16 @@ index 00000000..d51ea265
 +sqfs_err sqfs_inode_get(sqfs *fs, sqfs_inode *inode, sqfs_inode_id id) {
 +	sqfs_md_cursor cur;
 +	sqfs_err err;
-+	
++
 +	memset(inode, 0, sizeof(*inode));
-+	
++
 +	sqfs_md_cursor_inode(&cur, id, fs->sb->inode_table_start);
 +	inode->next = cur;
-+	
++
 +	err = sqfs_md_read(fs, &cur, &inode->base, sizeof(inode->base));
 +	if (err)
 +		return err;
-+	
++
 +	inode->base.mode |= sqfs_mode(inode->base.inode_type);
 +	switch (inode->base.inode_type) {
 +		case SQUASHFS_REG_TYPE: {
@@ -3951,7 +3951,7 @@ index 00000000..d51ea265
 +			INODE_TYPE(symlink);
 +			inode->nlink = x.nlink;
 +			inode->xtra.symlink_size = x.symlink_size;
-+			
++
 +			if (inode->base.inode_type == SQUASHFS_LSYMLINK_TYPE) {
 +				/* skip symlink target */
 +				cur = inode->next;
@@ -3987,10 +3987,10 @@ index 00000000..d51ea265
 +			inode->nlink = x.nlink;
 +			break;
 +		}
-+		
++
 +		default: return SQFS_ERR;
 +	}
-+	
++
 +	return SQFS_OK;
 +}
 +#undef INODE_TYPE
@@ -4031,7 +4031,7 @@ index 00000000..2996a24d
 +
 +static sqfs_err sqfs_hash_add_internal(sqfs_hash *h, int doubling,
 +		sqfs_hash_key k, sqfs_hash_value v) {
-+	size_t hash = (k & (h->capacity - 1));	
++	size_t hash = (k & (h->capacity - 1));
 +	sqfs_hash_bucket *b = malloc(sizeof(sqfs_hash_bucket) + h->value_size);
 +	if (!b)
 +		return SQFS_ERR;
@@ -4040,7 +4040,7 @@ index 00000000..2996a24d
 +	b->next = h->buckets[hash];
 +	h->buckets[hash] = b;
 +	++h->size;
-+	
++
 +	return SQFS_OK;
 +}
 +
@@ -4049,10 +4049,10 @@ index 00000000..2996a24d
 +	size_t oc = h->capacity;
 +	size_t i;
 +	sqfs_err err;
-+	
++
 +	if ((err = sqfs_hash_init(h, h->value_size, oc * 2)))
 +		return err;
-+	
++
 +	for (i = 0; i < oc; ++i) {
 +		sqfs_hash_bucket *b = ob[i];
 +		while (b) {
@@ -4064,7 +4064,7 @@ index 00000000..2996a24d
 +			b = n;
 +		}
 +	}
-+	
++
 +	free(ob);
 +	return err;
 +}
@@ -4073,7 +4073,7 @@ index 00000000..2996a24d
 +	memset(h, 0, sizeof(*h));
 +	if ((initial & (initial - 1))) /* not power of two? */
 +		return SQFS_ERR;
-+	
++
 +	h->buckets = calloc(initial, sizeof(sqfs_hash_bucket*));
 +	if (!h->buckets)
 +		return SQFS_ERR;
@@ -4082,7 +4082,7 @@ index 00000000..2996a24d
 +	h->value_size = vsize;
 +	return SQFS_OK;
 +}
-+ 
++
 +void sqfs_hash_destroy(sqfs_hash *h) {
 +	size_t i;
 +	for (i = 0; i < h->capacity; ++i) {
@@ -4331,7 +4331,7 @@ index 00000000..c87bea1d
 +	st->st_mode = inode->base.mode;
 +	st->st_nlink = inode->nlink;
 +	st->st_mtime = st->st_ctime = st->st_atime = inode->base.mtime;
-+	
++
 +	if (S_ISREG(st->st_mode)) {
 +		/* FIXME: do symlinks, dirs, etc have a size? */
 +		st->st_size = inode->xtra.reg.file_size;
@@ -4341,7 +4341,7 @@ index 00000000..c87bea1d
 +	} else if (S_ISLNK(st->st_mode)) {
 +		st->st_size = inode->xtra.symlink_size;
 +	}
-+	
++
 +	return SQFS_OK;
 +}
 diff --git a/ruby/squash_readlink.c b/ruby/squash_readlink.c
@@ -4547,11 +4547,11 @@ index 00000000..fe748c39
 +	char *items;
 +	if (cap <= s->capacity)
 +		return SQFS_OK;
-+	
++
 +	items = realloc(s->items, cap * s->value_size);
 +	if (!items)
 +		return SQFS_ERR;
-+	
++
 +	s->items = items;
 +	s->capacity = cap;
 +	return SQFS_OK;
@@ -4562,10 +4562,10 @@ index 00000000..fe748c39
 +#define CAPACITY_RATIO 3 / 2
 +static size_t sqfs_stack_next_capacity(size_t cap) {
 +	size_t n;
-+	
++
 +	if (cap == 0)
 +		return CAPACITY_DEFAULT;
-+	
++
 +	n = cap * CAPACITY_RATIO;
 +	if (n <= cap)
 +		return cap + 1;
@@ -4615,10 +4615,10 @@ index 00000000..fe748c39
 +
 +short sqfs_stack_pop(sqfs_stack *s) {
 +	void *v;
-+	
++
 +	if (s->size == 0)
 +		return 0;
-+	
++
 +	sqfs_stack_top(s, &v);
 +	if (s->freer)
 +		s->freer(v);
@@ -4633,7 +4633,7 @@ index 00000000..fe748c39
 +sqfs_err sqfs_stack_at(sqfs_stack *s, size_t i, void *vout) {
 +	if (i >= s->size)
 +		return SQFS_ERR;
-+	
++
 +	*(void**)vout = s->items + i * s->value_size;
 +	return SQFS_OK;
 +}
@@ -4641,7 +4641,7 @@ index 00000000..fe748c39
 +sqfs_err sqfs_stack_top(sqfs_stack *s, void *vout) {
 +	if (s->size == 0)
 +		return SQFS_ERR;
-+	
++
 +	return sqfs_stack_at(s, s->size - 1, vout);
 +}
 diff --git a/ruby/squash_stat.c b/ruby/squash_stat.c
@@ -4665,7 +4665,7 @@ index 00000000..ccab07d2
 +	sqfs_err error;
 +	sqfs_inode node;
 +	short found;
-+	
++
 +	error = sqfs_inode_get(fs, &node, sqfs_inode_root(fs));
 +	if (SQFS_OK != error) {
 +		goto failure;
@@ -4771,10 +4771,10 @@ index 00000000..e4fbd5cd
 +sqfs_err sqfs_table_init(sqfs_table *table, sqfs_fd_t fd, sqfs_off_t start, size_t each,
 +		size_t count) {
 +	//size_t nblocks, bread;
-+	
++
 +	if (count == 0)
 +		return SQFS_OK;
-+	
++
 +	//nblocks = sqfs_divceil(each * count, SQUASHFS_METADATA_SIZE);
 +
 +	//unused
@@ -4782,7 +4782,7 @@ index 00000000..e4fbd5cd
 +
 +	table->each = each;
 +	table->blocks = (uint64_t *)(fd + start);
-+	
++
 +	return SQFS_OK;
 +}
 +
@@ -4795,11 +4795,11 @@ index 00000000..e4fbd5cd
 +	size_t pos = idx * table->each;
 +	size_t bnum = pos / SQUASHFS_METADATA_SIZE,
 +		off = pos % SQUASHFS_METADATA_SIZE;
-+	
++
 +	sqfs_off_t bpos = table->blocks[bnum];
 +	if (sqfs_md_cache(fs, &bpos, &block))
 +		return SQFS_ERR;
-+	
++
 +	memcpy(buf, (char*)(block->data) + off, table->each);
 +	/* BLOCK CACHED, DON'T DISPOSE */
 +	return SQFS_OK;
@@ -4853,11 +4853,11 @@ index 00000000..012d98b9
 +	   work to do. */
 +	TRAVERSE_DESCEND,		 	/* Descend into the current entry (a dir) */
 +	TRAVERSE_NAME_REMOVE, /* Remove the name from the end of the stored path */
-+	
++
 +	/* End states */
 +	TRAVERSE_ERROR,
 +	TRAVERSE_FINISHED,
-+	
++
 +	/* Internal */
 +	TRAVERSE_ASCEND,			/* Done with a directory, ascend a level */
 +	TRAVERSE_NAME_ADD,		/* Add a name to the end of the stored path */
@@ -4905,22 +4905,22 @@ index 00000000..012d98b9
 +sqfs_err sqfs_traverse_open_inode(sqfs_traverse *trv, sqfs *fs,
 +		sqfs_inode *inode) {
 +	sqfs_err err;
-+	
-+	sqfs_traverse_init(trv);	
++
++	sqfs_traverse_init(trv);
 +	if ((err = sqfs_traverse_path_init(trv)))
 +		goto error;
 +	err = sqfs_stack_create(&trv->stack, sizeof(sqfs_traverse_level), 0, NULL);
 +	if (err)
 +		goto error;
-+	
++
 +	trv->fs = fs;
 +	if ((err = sqfs_traverse_descend_inode(trv, inode)))
 +		goto error;
-+	
++
 +	sqfs_traverse_path_set_name_size(trv, 0); /* The root has no name */
 +	trv->state = TRAVERSE_NAME_REMOVE;
 +	return SQFS_OK;
-+	
++
 +error:
 +	sqfs_traverse_close(trv);
 +	return err;
@@ -4929,10 +4929,10 @@ index 00000000..012d98b9
 +sqfs_err sqfs_traverse_open(sqfs_traverse *trv, sqfs *fs, sqfs_inode_id iid) {
 +	sqfs_err err;
 +	sqfs_inode inode;
-+	
++
 +	if ((err = sqfs_inode_get(fs, &inode, iid)))
 +		return err;
-+	
++
 +	return sqfs_traverse_open_inode(trv, fs, &inode);
 +}
 +
@@ -4946,14 +4946,14 @@ index 00000000..012d98b9
 +short sqfs_traverse_next(sqfs_traverse *trv, sqfs_err *err) {
 +	sqfs_traverse_level *level;
 +	short found;
-+	
++
 +	*err = SQFS_OK;
 +	while (1) {
 +		switch (trv->state) {
 +			case TRAVERSE_GET_ENTRY:
 +				if ((*err = sqfs_stack_top(&trv->stack, &level)))
 +					goto error;
-+				
++
 +				found = sqfs_dir_next(trv->fs, &level->dir, &trv->entry, err);
 +				if (*err)
 +					goto error;
@@ -4962,7 +4962,7 @@ index 00000000..012d98b9
 +				else
 +					trv->state = TRAVERSE_ASCEND;
 +				break;
-+			
++
 +			case TRAVERSE_NAME_ADD:
 +				if ((*err = sqfs_traverse_path_add_name(trv)))
 +					goto error;
@@ -4972,19 +4972,19 @@ index 00000000..012d98b9
 +					trv->state = TRAVERSE_NAME_REMOVE;
 +				trv->dir_end = 0;
 +				return 1;
-+			
++
 +			case TRAVERSE_NAME_REMOVE:
 +				sqfs_traverse_path_remove_name(trv);
 +				trv->state = TRAVERSE_GET_ENTRY;
 +				break;
-+			
++
 +			case TRAVERSE_DESCEND:
 +				*err = sqfs_traverse_descend(trv, sqfs_dentry_inode(&trv->entry));
 +				if (*err)
 +					goto error;
 +				trv->state = TRAVERSE_GET_ENTRY;
 +				break;
-+			
++
 +			case TRAVERSE_ASCEND:
 +				if ((*err = sqfs_traverse_ascend(trv)))
 +					goto error;
@@ -4995,16 +4995,16 @@ index 00000000..012d98b9
 +				}
 +				trv->state = TRAVERSE_FINISHED;
 +				break;
-+			
++
 +			case TRAVERSE_FINISHED:
 +				return 0;
-+			
++
 +			case TRAVERSE_ERROR:
 +				*err = SQFS_ERR;
 +				goto error;
 +		}
 +	}
-+	
++
 +error:
 +	trv->state = TRAVERSE_ERROR;
 +	return 0;
@@ -5037,14 +5037,14 @@ index 00000000..012d98b9
 +		size_t next_cap = trv->path_cap;
 +		while (need > next_cap)
 +			next_cap *= 2;
-+		
++
 +		if (!(next_path = realloc(trv->path, next_cap)))
 +			return SQFS_ERR;
-+		
++
 +		trv->path = next_path;
 +		trv->path_cap = next_cap;
 +	}
-+	
++
 +	memcpy(trv->path + trv->path_size - 1, str, size);
 +	trv->path_size = need;
 +	sqfs_traverse_path_terminate(trv);
@@ -5056,7 +5056,7 @@ index 00000000..012d98b9
 +		trv->path_size -= size;
 +	else
 +		trv->path_size = 1; /* only nul terminator left */
-+	
++
 +	sqfs_traverse_path_terminate(trv);
 +}
 +
@@ -5089,14 +5089,14 @@ index 00000000..012d98b9
 +	sqfs_err err;
 +	sqfs_traverse_level *level;
 +	short initial;
-+	
++
 +	initial = (sqfs_stack_size(&trv->stack) == 0);
-+	
++
 +	if ((err = sqfs_stack_push(&trv->stack, &level)))
-+		return err;	
++		return err;
 +	if ((err = sqfs_dir_open(trv->fs, inode, &level->dir, 0)))
 +		return err;
-+	
++
 +	if (initial) {
 +		/* Don't add the separator or store the size for the root directory */
 +		level->name_size = 0;
@@ -5105,30 +5105,30 @@ index 00000000..012d98b9
 +		if ((err = sqfs_traverse_path_add_sep(trv)))
 +			return err;
 +	}
-+	
++
 +	return err;
 +}
 +
 +static sqfs_err sqfs_traverse_descend(sqfs_traverse *trv, sqfs_inode_id iid) {
 +	sqfs_err err;
 +	sqfs_inode inode;
-+	
++
 +	if ((err = sqfs_inode_get(trv->fs, &inode, iid)))
 +		return err;
-+	
++
 +	return sqfs_traverse_descend_inode(trv, &inode);
 +}
 +
 +static sqfs_err sqfs_traverse_ascend(sqfs_traverse *trv) {
 +	sqfs_err err;
 +	sqfs_traverse_level *level;
-+	
++
 +	if ((err = sqfs_stack_top(&trv->stack, &level)))
 +		return err;
-+	
++
 +	sqfs_traverse_path_remove_sep(trv); /* safe even if initial */
 +	sqfs_traverse_path_set_name_size(trv, level->name_size);
-+	
++
 +	sqfs_stack_pop(&trv->stack);
 +	return SQFS_OK;
 +}
@@ -5222,6 +5222,6 @@ index 00000000..ebccdb97
 +	return err;
 +}
 +
--- 
+--
 2.24.3 (Apple Git-128)
 
