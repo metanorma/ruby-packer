@@ -85,6 +85,10 @@ OptionParser.new do |opts|
     options[:keep_tmpdir] = true
   end
 
+  opts.on('--openssl-dir=DIR', 'The path to openssl') do |dir|
+    options[:openssl_dir] = dir
+  end
+
   opts.on("--make-args=ARGS", "Extra arguments to be passed to make") do |args|
     options[:make_args] = args
   end
@@ -99,6 +103,14 @@ OptionParser.new do |opts|
 
   opts.on("--gem-version=VER", "Downloads and compiles the specified version of the gem") do |ver|
     options[:gem_version] = ver
+  end
+
+  opts.on('-i', '--ignore-file=STRING', 'Ignore file(s) from build') do |string|
+    if options[:ignore_file].is_a?(Array)
+      options[:ignore_file] << string
+    else
+      options[:ignore_file] = [string]
+    end
   end
 
   opts.on("--debug", "Enable debug mode") do
