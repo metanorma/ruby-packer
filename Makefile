@@ -19,10 +19,12 @@ ZLIB_URL = https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 # To avoid removal of intermediate files
 .SECONDARY:
 
-.PHONY: all clean
+.PHONY: all make-vendor clean
 
-all: clean-binary ruby vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
-     vendor/readline vendor/yaml vendor/zlib
+all: clean-binary ruby make-vendor
+
+make-vendor: vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
+             vendor/readline vendor/yaml vendor/zlib
 
 ruby: .archives/ruby-$(RUBY_VERSION).tar.gz
 	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
