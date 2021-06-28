@@ -21,12 +21,31 @@ ZLIB_URL = https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 # To avoid removal of intermediate files
 .SECONDARY:
 
-.PHONY: all make-vendor clean
+.PHONY: usage linux macos dependencies vendor clean
 
-all: clean-binary ruby make-vendor
+.DEFAULT_GOAL := usage
 
-make-vendor: vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
-             vendor/readline vendor/yaml vendor/zlib
+usage:
+	@echo "Please use either 'make linux', or 'make macos'."
+	@exit 1
+
+linux: rubyc-linux-x64
+
+rubyc-linux-x64: dependencies
+	$(eval TEMP_DIR := $(shell mktemp -d .rubyc-build.XXXXXX))
+	cp -r * $(TEMP_DIR)
+	bin/rubyc --clean-tmpdir --root "$(TEMP_DIR)" --output $@ "$(TEMP_DIR)/bin/rubyc"
+	strip $@
+
+macos: rubyc-darwin-x64
+
+rubyc-darwin-x64: dependencies
+	env CC="xcrun clang -mmacosx-version-min=10.10 -Wno-implicit-function-declaration" bin/rubyc --clean-tmpdir --output $@ bin/rubyc
+
+dependencies: clean-binary ruby vendor
+
+vendor: vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
+        vendor/readline vendor/yaml vendor/zlib
 
 ruby: .archives/ruby-$(RUBY_VERSION).tar.gz
 	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
@@ -83,7 +102,7 @@ vendor/zlib: .archives/zlib-$(ZLIB_VERSION).tar.gz
 	curl -sSL --create-dirs -o $@ $(ZLIB_URL)
 
 clean-all: clean clean-archives
-clean: clean-ruby clean-vendor clean-binary
+clean: clean-ruby clean-vendor clean-binary clean-build
 
 clean-archives:
 	rm -rf .archives
@@ -98,4 +117,7 @@ clean-vendor-%:
 	rm -rf vendor/$(*)
 
 clean-binary:
-	rm -f rubyc-linux-x64
+	rm -f rubyc-*-x64
+
+clean-build:
+	rm -rf .rubyc-build.*

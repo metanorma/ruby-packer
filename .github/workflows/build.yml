@@ -1,5 +1,9 @@
 name: build
 
+env:
+  ruby_version: 2.6.3
+  bundler_version: 2.2.3
+
 on:
   push:
     branches: [ master, main ]
@@ -14,11 +18,9 @@ jobs:
 
     - uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.6.3
+        ruby-version: ${{ env.ruby_version }}
 
-    - run: make
-
-    - run: bin/build-linux.sh
+    - run: make linux
 
     - run: |
         ./rubyc-linux-x64 -v
@@ -36,7 +38,7 @@ jobs:
 
     - uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.6.3
+        ruby-version: ${{ env.ruby_version }}
 
     - uses: shogo82148/actions-setup-perl@v1
       with:
@@ -44,9 +46,7 @@ jobs:
 
     - run: brew install squashfs
 
-    - run: make
-
-    - run: bin/build-macos.sh
+    - run: make macos
 
     - run: |
         ./rubyc-darwin-x64 -v
@@ -77,8 +77,8 @@ jobs:
 
     - uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.6.3
-        bundler: 2.2.3
+        ruby-version: ${{ env.ruby_version }}
+        bundler: ${{ env.bundler_version }}
         bundler-cache: true
 
     - run: bundle update --all
@@ -176,8 +176,8 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.6.3
-          bundler: 2.2.3
+          ruby-version: ${{ env.ruby_version }}
+          bundler: ${{ env.bundler_version }}
           bundler-cache: true
 
       - run: bundle update --all
