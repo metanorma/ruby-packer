@@ -2,10 +2,6 @@
 
 *Ahead-of-time (AOT) Compiler designed for Ruby, that just works.*
 
-[![Status](https://ci.appveyor.com/api/projects/status/93i36eliiy6v3686/branch/master?svg=true)](https://ci.appveyor.com/project/pmq20/ruby-compiler/branch/master)
-[![Status](https://travis-ci.org/pmq20/ruby-compiler.svg?branch=master)](https://travis-ci.org/pmq20/ruby-compiler)
-[![GitHub version](https://badge.fury.io/gh/pmq20%2Fruby-compiler.svg)](https://badge.fury.io/gh/pmq20%2Fruby-compiler)
-
 ## Features
 
 - Works on Linux, Mac and Windows
@@ -21,14 +17,6 @@ It takes less than 5 minutes to compile any project with Ruby Compiler.
 
 You won't need to modify a single line of code in your application, no matter how you developed it as long as it works in plain Ruby!
 
-|                       | Architecture |           Latest&#160;Stable                 |
-|:---------------------:|:------------:|----------------------------------------------|
-|       **macOS**       |    x86-64    | http://enclose.io/rubyc/rubyc-darwin-x64.gz  |
-|       **Linux**       |    x86-64    | http://enclose.io/rubyc/rubyc-linux-x64.gz   |
-|      **Windows**      |    x86-64    | http://enclose.io/rubyc/rubyc-x64.zip        |
-
-For previous releases, cf. http://enclose.io/rubyc
-
 ### Install on macOS
 
 First install the prerequisites:
@@ -42,7 +30,7 @@ First install the prerequisites:
 
 Then,
 
-    curl -L http://enclose.io/rubyc/rubyc-darwin-x64.gz | gunzip > rubyc
+    curl -L https://github.com/metanorma/ruby-packer/releases/download/v0.6.0/rubyc-darwin-x64 > rubyc
     chmod +x rubyc
     ./rubyc --help
 
@@ -59,7 +47,7 @@ First install the prerequisites:
 
 Then,
 
-    curl -L http://enclose.io/rubyc/rubyc-linux-x64.gz | gunzip > rubyc
+    curl -L https://github.com/metanorma/ruby-packer/releases/download/v0.6.0/rubyc-linux-x64 > rubyc
     chmod +x rubyc
     ./rubyc --help
 
@@ -73,7 +61,7 @@ First install the prerequisites:
   "Common Tools for Visual C++ 2015" feature during installation).
 * [Ruby](https://www.ruby-lang.org/)
 
-Then download [rubyc-x64.zip](http://enclose.io/rubyc/rubyc-x64.zip),
+Then download rubyc-x64.zip,
 and this zip file contains only one executable.
 Unzip it. Optionally,
 rename it to `rubyc.exe` and put it under `C:\Windows` (or any other directory that is part of `PATH`).
