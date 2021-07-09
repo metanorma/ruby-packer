@@ -67,9 +67,8 @@ jobs:
         repository: metanorma/packed-mn
 
     - run: |
-        sed -i '13 s/^#//' Gemfile
-        sed -i '16 s/^#//' Gemfile
-        cat Gemfile
+        sed -i 's/__enclose_io_memfs__/__ruby_packer_memfs__/' bin/metanorma
+        cat bin/metanorma
 
     - uses: metanorma/metanorma-build-scripts/gh-rubygems-setup-action@master
       with:
@@ -166,9 +165,8 @@ jobs:
           repository: metanorma/packed-mn
 
       - run: |
-          sed -i '' '13 s/^#//' Gemfile
-          sed -i '' '16 s/^#//' Gemfile
-          cat Gemfile
+          sed -i '' 's/__enclose_io_memfs__/__ruby_packer_memfs__/' bin/metanorma
+          cat bin/metanorma
 
       - uses: metanorma/metanorma-build-scripts/gh-rubygems-setup-action@master
         with:
