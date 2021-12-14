@@ -1,0 +1,36 @@
+From f8f0fa902059cc0afd6c90e3acb89f4845a01324 Mon Sep 17 00:00:00 2001
+From: Alexey Morozov <alexey.morozov.is@gmail.com>
+Date: Tue, 14 Dec 2021 13:49:59 +0300
+Subject: [PATCH 8/8] net http cert
+
+---
+ ruby/lib/net/http.rb | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/ruby/lib/net/http.rb b/ruby/lib/net/http.rb
+index 9eae350b..94ddd869 100644
+--- a/ruby/lib/net/http.rb
++++ b/ruby/lib/net/http.rb
+@@ -689,6 +689,19 @@ def initialize(address, port = nil)
+       SSL_IVNAMES.each do |ivname|
+         instance_variable_set ivname, nil
+       end
++
++      @cert_store = default_cert_store unless ENV['RUBY_PACKER_RUBYC_1ST_PASS']
++    end
++
++    def default_cert_store
++      OpenSSL::X509::Store.new.tap do |store|
++        from_memfs = "/__ruby_packer_memfs__/lib/ssl/cert.pem"
++        certs = File.read(from_memfs).split("\n\n")[1..-1]
++        certs.each do |content|
++          cert = OpenSSL::X509::Certificate.new(content)
++          store.add_cert(cert)
++        end
++      end
+     end
+ 
+     def inspect
+-- 
+2.24.3 (Apple Git-128)
+

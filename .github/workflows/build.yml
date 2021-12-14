@@ -12,7 +12,7 @@ on:
 
 jobs:
   linux:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
 
@@ -32,7 +32,7 @@ jobs:
         path: rubyc-linux-x64
 
   macos:
-    runs-on: macos-latest
+    runs-on: macos-10.15
     steps:
     - uses: actions/checkout@v2
 
@@ -60,7 +60,7 @@ jobs:
   linux-packed-mn:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     needs: linux
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -129,7 +129,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-16.04, ubuntu-18.04, ubuntu-20.04 ]
+        os: [ ubuntu-18.04, ubuntu-20.04 ]
         ignore-errors: [ false ]
         test-flavor:
           - iso
@@ -158,7 +158,7 @@ jobs:
   macos-packed-mn:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     needs: macos
-    runs-on: macos-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
         with:

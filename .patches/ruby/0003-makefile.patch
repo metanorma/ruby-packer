@@ -1,7 +1,7 @@
-From 9b2aa1b2faca7693d211246f03db0327b4c8adc7 Mon Sep 17 00:00:00 2001
+From cb2e792a5d74bf21239b251d3806f4cc244f3fb9 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:34:49 +0300
-Subject: [PATCH 3/7] makefile
+Subject: [PATCH 3/8] makefile
 
 ---
  ruby/Makefile.in        |  6 +++---
@@ -21,23 +21,23 @@ index fa1e19ef..5cba915a 100644
 -		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(OUTFLAG)$@
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(NORMALMAINOBJ) $(MINIOBJS) $(COMMONOBJS) $(MAINLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
  		$(Q) $(POSTLINK)
-
+ 
  $(PROGRAM):
  		@$(RM) $@
  		$(ECHO) linking $@
 -		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(EXTOBJS) $(LIBRUBYARG) $(MAINLIBS) $(LIBS) $(EXTLIBS) $(OUTFLAG)$@
 +		$(Q) $(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(EXTOBJS) $(LIBRUBYARG) $(MAINLIBS) $(LIBS) $(EXTLIBS) $(RUBYC_FLAGS) $(OUTFLAG)$@ $(LDFLAGS)
  		$(Q) $(POSTLINK)
-
+ 
  PRE_LIBRUBY_UPDATE = [ -n "$(LIBRUBY_SO_UPDATE)" ] || $(exec) $(RM) $(LIBRUBY_EXTS)
 @@ -285,7 +285,7 @@ $(LIBRUBY_A):
-
+ 
  verify-static-library: $(LIBRUBY_A)
  		$(ECHO) verifying static-library $@
 -		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(OUTFLAG)conftest$(EXEEXT)
 +		@$(PURIFY) $(CC) $(LDFLAGS) $(XLDFLAGS) $(MAINOBJ) $(LIBRUBY_A) $(MAINLIBS) $(EXTLIBS) $(LIBS) $(RUBYC_FLAGS) $(OUTFLAG)conftest$(EXEEXT) $(LDFLAGS)
  		@$(RMALL) conftest$(EXEEXT) conftest.c conftest.dSYM
-
+ 
  $(LIBRUBY_SO):
 diff --git a/ruby/ext/dbm/extconf.rb b/ruby/ext/dbm/extconf.rb
 index c9a5518b..8b636a68 100644
@@ -48,7 +48,7 @@ index c9a5518b..8b636a68 100644
    dblib = %w(libc db db2 db1 db6 db5 db4 db3 gdbm_compat gdbm qdbm)
  end
 +dblib = %w(gdbm_compat)
-
+ 
  headers = {
    "libc" => ["ndbm.h"], # 4.3BSD original ndbm, Berkeley DB 1 in 4.4BSD libc.
 diff --git a/ruby/lib/mkmf.rb b/ruby/lib/mkmf.rb
@@ -56,15 +56,15 @@ index 0d9d3d9f..4257952e 100644
 --- a/ruby/lib/mkmf.rb
 +++ b/ruby/lib/mkmf.rb
 @@ -2698,17 +2698,17 @@ def MAIN_DOES_NOTHING(*refs)
-
+ 
    TRY_LINK = config_string('TRY_LINK') ||
      "$(CC) #{OUTFLAG}#{CONFTEST}#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
 -    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS)"
 +    "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS) $(MAINLIBS) $(LDFLAGS)"
-
+ 
    ##
    # Command which will link a shared library
-
+ 
    LINK_SO = (config_string('LINK_SO') || "").sub(/^$/) do
      if CONFIG["DLEXT"] == $OBJEXT
 -      "ld $(DLDFLAGS) -r -o $@ $(OBJS)\n"
@@ -75,7 +75,7 @@ index 0d9d3d9f..4257952e 100644
 +      "$(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS) $(DLDFLAGS)"
      end
    end
-
+ 
 diff --git a/ruby/win32/Makefile.sub b/ruby/win32/Makefile.sub
 index 9ee5ddd5..b347ace7 100644
 --- a/ruby/win32/Makefile.sub
@@ -103,7 +103,7 @@ index 9ee5ddd5..b347ace7 100644
 @@ -1096,10 +1098,42 @@ miniruby$(EXEEXT):
  miniruby.rc:
  		@exit > $@
-
+ 
 +ruby_static.exe:	$(MAINOBJ) $(LIBRUBY_SO) $(RUBY_INSTALL_NAME).res
 +		$(ECHO) linking $(@:\=/)
 +		$(Q) $(PURIFY) $(CC) $(CFLAGS) $(MAINOBJ) $(RUBY_INSTALL_NAME).res \
@@ -162,6 +162,6 @@ index 9ee5ddd5..b347ace7 100644
  			$(OUTFLAG)$@ $(LIBRUBYARG) -link $(LDFLAGS) $(XLDFLAGS)
  		$(Q) $(LDSHARED_0)
  		$(Q) $(LDSHARED_1)
---
+-- 
 2.24.3 (Apple Git-128)
 

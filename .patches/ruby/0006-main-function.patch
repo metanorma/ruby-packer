@@ -1,7 +1,7 @@
-From 8d6d745b1946563ac6f9a3b0bfa282df2a4bdc0d Mon Sep 17 00:00:00 2001
+From 8c2ac41031708f98e080446379208e0eda423f09 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:59:02 +0300
-Subject: [PATCH 6/7] main function
+Subject: [PATCH 6/8] main function
 
 ---
  ruby/main.c | 85 +++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -14,7 +14,7 @@ index 4b2675bc..bf8e4f3e 100644
 @@ -25,9 +25,94 @@
  #include <stdlib.h>
  #endif
-
+ 
 +#include "ruby_packer.h"
 +#ifdef _WIN32
 +#include <direct.h>
@@ -106,6 +106,6 @@ index 4b2675bc..bf8e4f3e 100644
  #ifdef RUBY_DEBUG_ENV
      ruby_set_debug_option(getenv("RUBY_DEBUG"));
  #endif
---
+-- 
 2.24.3 (Apple Git-128)
 

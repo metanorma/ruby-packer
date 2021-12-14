@@ -46,9 +46,9 @@ class Compiler
       STDERR.puts "-> cd #{Dir.pwd}" unless @options[:quiet]
     end
     
-    def cp(x, y)
+    def cp(x, y, options = {})
       STDERR.puts "-> cp #{x.inspect} #{y.inspect}" unless @options[:quiet]
-      FileUtils.cp(x, y)
+      FileUtils.cp(x, y, options)
     end
     
     def cp_r(x, y, options = {})

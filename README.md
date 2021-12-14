@@ -120,6 +120,23 @@ ENTRANCE can be either a file path, or a "x" string as in bundle exec "x".
 	rubyc --gem=bundler bundle
 	./a.out (or a.exe on Windows)
 
+### How to make a patch of Ruby source
+
+	curl -sSL --create-dirs -o .archives/ruby-2.6.3.tar.gz https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.3.tar.gz
+	tar xzf .archives/ruby-2.6.3.tar.gz && mv ruby-2.6.3 ruby && git add -f ruby && git commit -m 'Ruby' && git am .patches/ruby/*
+	# make changes
+	git add -f ruby
+	git commit -m 'new changes'
+	git rebase -i master
+	# reorder and squash commits as you would like
+	# 8 is number of commits to extract as patches
+	git format-patch -8 -o .patches/ruby
+	git add .patches/ruby
+	git commit -m 'new changes'
+	git rebase -i master
+	# remove all commits except the last one (start from "Ruby" up to the commit with the patch changes)
+	# it's done
+
 ## See Also
 
 - [Libsquash](https://github.com/pmq20/libsquash): portable, user-land SquashFS that can be easily linked and embedded within your application.

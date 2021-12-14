@@ -1,7 +1,7 @@
-From d08676f89b80cb77aef7c40de4ab15ab8b8eca2a Mon Sep 17 00:00:00 2001
+From 67bd95cba46c389ccd5a4caba4084c0daf99b3ff Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 20:05:44 +0300
-Subject: [PATCH 5/7] ruby packer usage
+Subject: [PATCH 5/8] ruby packer usage
 
 ---
  ruby/dir.c                        | 21 ++++++++--
@@ -25,7 +25,7 @@ index d5672632..a16dc355 100644
 @@ -127,6 +127,8 @@ char *strchr(char*,char);
  # define NORMALIZE_UTF8PATH 0
  #endif
-
+ 
 +#include "ruby_packer.h"
 +
  #if NORMALIZE_UTF8PATH
@@ -60,7 +60,7 @@ index d5672632..a16dc355 100644
  #endif
 @@ -1772,9 +1781,13 @@ is_case_sensitive(DIR *dirp, const char *path)
      const uint32_t mask = VOL_CAP_FMT_CASE_SENSITIVE;
-
+ 
  #   if defined HAVE_FGETATTRLIST
 +    if (squash_find_entry(dirp)) { return 1; }
 +
@@ -83,7 +83,7 @@ index d5672632..a16dc355 100644
  						flags, &new_pathtype);
 @@ -3362,7 +3375,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
      path = RSTRING_PTR(dirname);
-
+ 
  #if defined HAVE_GETATTRLIST && defined ATTR_DIR_ENTRYCOUNT
 -    {
 +    if (!ruby_packer_is_path(path)) {
@@ -97,7 +97,7 @@ index f0a7e778..aba56af2 100644
 @@ -116,6 +116,8 @@ dln_loaderror(const char *format, ...)
  #define isdirsep(x) ((x) == '/')
  #endif
-
+ 
 +#include "ruby_packer.h"
 +
  static size_t
@@ -133,7 +133,7 @@ index 3413967f..daafa41a 100644
 @@ -89,6 +89,8 @@ int flock(int, int);
  #define lstat stat
  #endif
-
+ 
 +#include "ruby_packer.h"
 +
  /* define system APIs */
@@ -146,7 +146,7 @@ index 633a90f8..e8e03d64 100644
 @@ -144,6 +144,8 @@ off_t __syscall(quad_t number, ...);
  #  define RUBY_PIPE_NONBLOCK_DEFAULT    (0)
  #endif
-
+ 
 +#include "ruby_packer.h"
 +
  VALUE rb_cIO;
@@ -159,7 +159,7 @@ index ed680d65..90ae30d9 100644
 @@ -25,6 +25,11 @@ class Gem::PathSupport
    def initialize(env)
      @home = env["GEM_HOME"] || Gem.default_dir
-
+ 
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
 +    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
 +      @home = Gem.default_dir unless 0 == @home.index('/__ruby_packer_memfs__')
@@ -169,9 +169,9 @@ index ed680d65..90ae30d9 100644
        @home = @home.gsub(File::ALT_SEPARATOR, File::SEPARATOR)
      end
 @@ -33,6 +38,13 @@ def initialize(env)
-
+ 
      @path = split_gem_path env["GEM_PATH"], @home
-
+ 
 +    # WE DO NOT ACCEPT OUTSIDE GEM PATHS
 +    unless env['RUBY_PACKER_RUBYC_1ST_PASS']
 +      @path.keep_if do |x|
@@ -180,7 +180,7 @@ index ed680d65..90ae30d9 100644
 +    end
 +
      @spec_cache_dir = env["GEM_SPEC_CACHE"] || Gem.default_spec_cache_dir
-
+ 
      @spec_cache_dir = @spec_cache_dir.dup.untaint
 diff --git a/ruby/prelude.c b/ruby/prelude.c
 index 2a426e3b..756be68b 100644
@@ -189,7 +189,7 @@ index 2a426e3b..756be68b 100644
 @@ -198,6 +198,55 @@ static const struct {
  #line 199 "prelude.c"
  };
-
+ 
 +static const char prelude_name_ruby_packer[] = "<internal:ruby_packer_prelude>";
 +static const char prelude_code_ruby_packer[] =
 +"\n class << Process"
@@ -239,13 +239,13 @@ index 2a426e3b..756be68b 100644
 +"\n   Dir.chdir('/__ruby_packer_memfs__/local')"
 +"\n end"
 +;
-
+ 
  #define PRELUDE_NAME(n) rb_usascii_str_new_static(prelude_name##n, sizeof(prelude_name##n)-1)
  #define PRELUDE_CODE(n) rb_usascii_str_new_static(prelude_code##n.L0, sizeof(prelude_code##n))
 @@ -239,6 +288,11 @@ Init_prelude(void)
      prelude_eval(PRELUDE_CODE(0), PRELUDE_NAME(0), 1);
      prelude_eval(PRELUDE_CODE(1), PRELUDE_NAME(1), 1);
-
+ 
 +    prelude_eval(
 +      rb_usascii_str_new(prelude_code_ruby_packer, sizeof(prelude_code_ruby_packer) - 1),
 +      rb_usascii_str_new(prelude_name_ruby_packer, sizeof(prelude_name_ruby_packer) - 1),
@@ -270,7 +270,7 @@ index 6ec48290..1a363801 100644
      rb_define_global_function("exit", rb_f_exit, -1);
      rb_define_global_function("abort", rb_f_abort, -1);
 @@ -8501,3 +8505,63 @@ Init_process(void)
-
+ 
      InitVM(process);
  }
 +
@@ -367,7 +367,7 @@ index df19fd4c..0366eb02 100644
 @@ -30,6 +30,8 @@
  const char ruby_hexdigits[] = "0123456789abcdef0123456789ABCDEF";
  #define hexdigit ruby_hexdigits
-
+ 
 +#include "ruby_packer.h"
 +
  unsigned long
@@ -380,7 +380,7 @@ index 446720c2..c9dcee1e 100644
 @@ -10,6 +10,8 @@
  #include <shlwapi.h>
  #include "win32/file.h"
-
+ 
 +#include "ruby_packer.h"
 +
  #ifndef INVALID_FILE_ATTRIBUTES
@@ -398,7 +398,7 @@ index d28bd564..803a537a 100644
 +#include "ruby_packer.h"
 +
  #define isdirsep(x) ((x) == '/' || (x) == '\\')
-
+ 
  #if defined _MSC_VER && _MSC_VER <= 1200
 @@ -849,6 +852,11 @@ static int w32_cmdvector(const WCHAR *, char ***, UINT, rb_encoding *);
  void
@@ -411,11 +411,11 @@ index d28bd564..803a537a 100644
 +
  #if RUBY_MSVCRT_VERSION >= 80
      static void set_pioinfo_extra(void);
-
+ 
 @@ -866,6 +874,26 @@ rb_w32_sysinit(int *argc, char ***argv)
      //
      *argc = w32_cmdvector(GetCommandLineW(), argv, CP_UTF8, &OnigEncodingUTF_8);
-
+ 
 +    #ifdef RUBY_PACKER_ENTRANCE
 +    new_argc = *argc;
 +    new_argv = *argv;
@@ -447,12 +447,12 @@ index d28bd564..803a537a 100644
 +	    curr->str[curr->len] = '\0';
 +	}
  	curr->flags |= NTMALLOC;
-
+ 
  	if (globbing && (tail = cmdglob(curr, cmdtail, cp, enc))) {
 @@ -7040,6 +7071,11 @@ rb_w32_read(int fd, void *buf, size_t size)
  	return -1;
      }
-
+ 
 +    if (SQUASH_VALID_VFD(fd)) {
 +	// TODO how about Binary Mode File I/O?
 +	return _read(fd, buf, size);
@@ -461,6 +461,6 @@ index d28bd564..803a537a 100644
      if (_osfile(fd) & FTEXT) {
  	return _read(fd, buf, size);
      }
---
+-- 
 2.24.3 (Apple Git-128)
 
