@@ -17,6 +17,7 @@ OPENSSL_URL = https://www.openssl.org/source/old/1.1.0/openssl-$(OPENSSL_VERSION
 READLINE_URL = https://ftp.gnu.org/gnu/readline/readline-$(READLINE_VERSION).tar.gz
 YAML_URL = https://pyyaml.org/download/libyaml/yaml-$(YAML_VERSION).tar.gz
 ZLIB_URL = https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz
+CACERT_URL = https://curl.se/ca/cacert.pem
 
 # To avoid removal of intermediate files
 .SECONDARY:
@@ -45,7 +46,7 @@ rubyc-darwin-x64: dependencies
 dependencies: clean-binary ruby vendor
 
 vendor: vendor/gdbm vendor/libffi vendor/ncurses vendor/openssl \
-        vendor/readline vendor/yaml vendor/zlib
+        vendor/readline vendor/yaml vendor/zlib vendor/cacert.pem
 
 ruby: .archives/ruby-$(RUBY_VERSION).tar.gz
 	tar xzf .archives/ruby-$(RUBY_VERSION).tar.gz
@@ -100,6 +101,11 @@ vendor/zlib: .archives/zlib-$(ZLIB_VERSION).tar.gz
 	cd vendor && tar xzf ../.archives/zlib-$(ZLIB_VERSION).tar.gz && mv zlib-$(ZLIB_VERSION) zlib
 .archives/zlib-$(ZLIB_VERSION).tar.gz:
 	curl -sSL --create-dirs -o $@ $(ZLIB_URL)
+
+vendor/cacert.pem: .archives/cacert.pem
+	cp $< $@
+.archives/cacert.pem:
+	curl -sSL --create-dirs -o $@ $(CACERT_URL)
 
 clean-all: clean clean-archives
 clean: clean-ruby clean-vendor clean-binary clean-build

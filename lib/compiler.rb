@@ -499,6 +499,8 @@ class Compiler
     unless @options[:keep_tmpdir]
       @utils.cp_r(@ruby_build, @work_dir_inner, preserve: true)
 
+      prepare_ca_cert
+
       Dir["#{@work_dir_inner}/**/*.{a,dylib,so,dll,lib,bundle}"].each do |thisdl|
         @utils.rm_f(thisdl)
       end
@@ -516,6 +518,12 @@ class Compiler
       'RUBY_PACKER_RUBYC_1ST_PASS' => '1',
       'RUBY_PACKER_RUBYC_2ND_PASS' => nil
     }
+  end
+
+  def prepare_ca_cert
+    target = File.join(@work_dir_inner, 'lib', 'ssl', 'cert.pem')
+    @utils.mkdir_p(File.dirname(target))
+    @utils.cp(File.join(PRJ_ROOT, 'vendor', 'cacert.pem'), target, preserve: true)
   end
 
   def prepare_local
