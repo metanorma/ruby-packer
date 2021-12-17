@@ -1,4 +1,4 @@
-From 8c2ac41031708f98e080446379208e0eda423f09 Mon Sep 17 00:00:00 2001
+From e0a4f34d3e3dc990d273100a887867103cbf03e1 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:59:02 +0300
 Subject: [PATCH 6/8] main function

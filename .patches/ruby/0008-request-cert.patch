@@ -1,0 +1,46 @@
+From ac70794ca1e09f9e61b7023170c109baf9daddb5 Mon Sep 17 00:00:00 2001
+From: Alexey Morozov <alexey.morozov.is@gmail.com>
+Date: Tue, 14 Dec 2021 13:49:59 +0300
+Subject: [PATCH 8/8] request cert
+
+---
+ ruby/lib/net/http.rb | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/ruby/lib/net/http.rb b/ruby/lib/net/http.rb
+index 9eae350b..35e0f4c4 100644
+--- a/ruby/lib/net/http.rb
++++ b/ruby/lib/net/http.rb
+@@ -554,6 +554,20 @@ def HTTP.socket_type   #:nodoc: obsolete
+       BufferedIO
+     end
+ 
++    def HTTP.default_ca_file
++      @default_ca_file ||= ENV['RUBY_PACKER_RUBYC_1ST_PASS'] ? nil : memfs_ca_file
++    end
++
++    def HTTP.memfs_ca_file
++      @memfs_ca_file ||= begin
++        require 'tempfile'
++        Tempfile.open do |file|
++          file.write(File.read("/__ruby_packer_memfs__/lib/ssl/cert.pem"))
++          file.path
++        end
++      end
++    end
++
+     # :call-seq:
+     #   HTTP.start(address, port, p_addr, p_port, p_user, p_pass, &block)
+     #   HTTP.start(address, port=nil, p_addr=:ENV, p_port=nil, p_user=nil, p_pass=nil, opt, &block)
+@@ -689,6 +703,8 @@ def initialize(address, port = nil)
+       SSL_IVNAMES.each do |ivname|
+         instance_variable_set ivname, nil
+       end
++
++      @ca_file = HTTP.default_ca_file
+     end
+ 
+     def inspect
+-- 
+2.24.3 (Apple Git-128)
+

@@ -1,4 +1,4 @@
-From 266a47e3e79cb5e36d49ad48d2ae68e61fd6df74 Mon Sep 17 00:00:00 2001
+From c93bf787212879b13b9f68938a5bee6c85e7cf66 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:50:34 +0300
 Subject: [PATCH 4/8] ssl certs
