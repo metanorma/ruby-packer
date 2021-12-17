@@ -3,3 +3,7 @@
 == 0.6.2 [2021-12-16]
 
 * The Mozilla SSL CA certificate is now included in a binary file, and `Net::HTTP` uses it by default
+
+== 0.6.3 [2021-12-17]
+
+* Support of a default CA certificate by `open-uri`
