@@ -1,4 +1,4 @@
-From d20ce2cd8cc9a3c76724e48c66d2cc62dd500df3 Mon Sep 17 00:00:00 2001
+From 704782cbb52970bf744bed825f97e9808e137f8c Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:46:16 +0300
 Subject: [PATCH 2/8] ruby packer source

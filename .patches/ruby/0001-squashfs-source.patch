@@ -1,4 +1,4 @@
-From a487c0af5df96e2b034c13fb57206ab96b2fbd84 Mon Sep 17 00:00:00 2001
+From b2b82dcf18b7a3321ee424b081e3f4f9ca138bf3 Mon Sep 17 00:00:00 2001
 From: Alexey Morozov <alexey.morozov.is@gmail.com>
 Date: Wed, 26 May 2021 18:44:59 +0300
 Subject: [PATCH 1/8] squashfs source
